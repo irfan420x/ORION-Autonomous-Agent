@@ -309,6 +309,21 @@ class LLMClient:
                 await asyncio.sleep(2 ** attempt)
                 continue
         
+        # All retries failed - try fallback model
+        if model != "mimo-v2.5" and "mimo" in (model or self._default_model):
+            logger.warning("Primary model failed, trying fallback: mimo-v2.5")
+            try:
+                return await self.chat(
+                    prompt=prompt,
+                    model="mimo-v2.5",
+                    system=system,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+            except Exception as fallback_error:
+                logger.error("Fallback also failed: %s", fallback_error)
+        
         raise RuntimeError(f"LLM call failed after {self._max_retries} attempts: {last_error}")
     
     async def chat_with_tools(
@@ -340,26 +355,38 @@ class LLMClient:
             "X-Title": "ORION Autonomous Agent",
         }
         
-        client = await self._get_client()
-        resp = await client.post(
-            f"{config.base_url}/chat/completions",
-            json=payload,
-            headers=headers,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        
-        choice = data.get("choices", [{}])[0]
-        message = choice.get("message", {})
-        usage = data.get("usage", {})
-        
-        return LLMResponse(
-            content=message.get("content", ""),
-            model=data.get("model", config.model_id),
-            tokens_input=usage.get("prompt_tokens", 0),
-            tokens_output=usage.get("completion_tokens", 0),
-            raw=data,
-        )
+        try:
+            client = await self._get_client()
+            resp = await client.post(
+                f"{config.base_url}/chat/completions",
+                json=payload,
+                headers=headers,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            
+            choice = data.get("choices", [{}])[0]
+            message = choice.get("message", {})
+            usage = data.get("usage", {})
+            
+            return LLMResponse(
+                content=message.get("content", ""),
+                model=data.get("model", config.model_id),
+                tokens_input=usage.get("prompt_tokens", 0),
+                tokens_output=usage.get("completion_tokens", 0),
+                raw=data,
+            )
+        except Exception as e:
+            # Fallback to mimo-v2.5 if pro fails
+            if model != "mimo-v2.5" and "mimo" in (model or self._default_model):
+                logger.warning("chat_with_tools failed, trying fallback: mimo-v2.5")
+                return await self.chat_with_tools(
+                    prompt=prompt,
+                    tools=tools,
+                    model="mimo-v2.5",
+                    system=system,
+                )
+            raise
     
     def get_stats(self) -> Dict[str, Any]:
         """Get LLM client statistics."""
