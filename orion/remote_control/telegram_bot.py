@@ -438,23 +438,26 @@ class OrionTelegramBot:
             await update.message.reply_text("❌ Memory Manager not initialized")
             return
         
-        stats = self.memory_manager.get_stats()
-        
-        await update.message.reply_text(
-            "🧠 **Memory Statistics:**\n\n"
-            "**Session Memory (Fast):**\n"
-            f"  • Entries: {stats['session']['total_entries']}\n"
-            f"  • Size: {stats['session']['total_size_bytes']} bytes\n\n"
-            "**Long-term Memory (Persistent):**\n"
-            f"  • Entries: {stats['long_term']['total_entries']}\n"
-            f"  • Size: {stats['long_term']['total_size_bytes']} bytes\n\n"
-            "**Episodic Memory (Experiences):**\n"
-            f"  • Episodes: {stats['episodic']['total_episodes']}\n"
-            f"  • Success Rate: {stats['episodic']['success_rate']:.1%}\n\n"
-            "**Semantic Memory (Vectors):**\n"
-            f"  • Documents: {stats['semantic']['total_documents']}",
-            parse_mode="Markdown"
-        )
+        try:
+            stats = self.memory_manager.get_stats()
+            
+            await update.message.reply_text(
+                "🧠 **Memory Statistics:**\n\n"
+                "**Session Memory (Fast):**\n"
+                f"  • Entries: {stats['session']['total_entries']}\n"
+                f"  • Size: {stats['session']['total_size_bytes']} bytes\n\n"
+                "**Long-term Memory (Persistent):**\n"
+                f"  • Entries: {stats['long_term']['total_entries']}\n"
+                f"  • Size: {stats['long_term']['total_size_bytes']} bytes\n\n"
+                "**Episodic Memory (Experiences):**\n"
+                f"  • Episodes: {stats['episodic']['total_episodes']}\n"
+                f"  • Success Rate: {stats['episodic']['success_rate']:.1%}\n\n"
+                "**Semantic Memory (Vectors):**\n"
+                f"  • Documents: {stats['semantic']['total_documents']}",
+                parse_mode="Markdown"
+            )
+        except Exception as e:
+            await update.message.reply_text(f"❌ Memory error: {str(e)[:100]}")
     
     async def remember_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle /remember command - store a memory."""
