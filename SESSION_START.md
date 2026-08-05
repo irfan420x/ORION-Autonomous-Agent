@@ -5,19 +5,20 @@
 - **Phase 2** — ✅ COMPLETE (67 tests)
 - **Phase 3** — ✅ COMPLETE (74 tests)
 - **Phase 4** — ✅ COMPLETE (84 tests)
-- **Phase 5** — 🔄 75% (M5.1, M5.2 done)
-- **Next:** M5.3 Browser Automation
-- **Total:** 493 tests | **Rust:** Compiled ✅ | **GUI:** PyQt6 ✅
+- **Phase 5** — 🔄 90% (M5.1–M5.3 done)
+- **Next:** M5.4 Vision System (final Phase 5)
+- **Total:** 504 tests | **Rust:** Compiled ✅ | **GUI:** PyQt6 ✅
 
 ## Phase 5 Progress
 - M5.1: OS Control + Desktop GUI ✅
 - M5.2: GUI Automation ✅ (18 tests)
-- M5.3: Browser Automation ⏳ NEXT
-- M5.4: Vision System ⏳
+- M5.3: Browser Automation ✅ (11 tests)
+- M5.4: Vision System ⏳ NEXT
 
 ## Key Files
 - `orion/gui/__main__.py` — GUI entry point
 - `orion/gui_automation/automation.py` — GUI automation
+- `orion/browser/browser_automation.py` — Browser automation
 
 ## Rules
 1. **Always read SESSION_START.md before starting work**
@@ -26,4 +27,4 @@
 4. Update this file at session end
 
 ---
-*Last updated: M5.2 GUI Automation complete*
+*Last updated: M5.3 Browser Automation complete*
