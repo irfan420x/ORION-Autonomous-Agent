@@ -1,0 +1,110 @@
+[
+  {
+    "rule_id": "RULE-ABS-001",
+    "title": "User-Controlled Permission Model Execution",
+    "description": "ব্যবহারকারীর নির্দেশই চূড়ান্ত। কোনো অভ্যন্তরীণ সেফটি ফিল্টার কোনো কাজ ব্লক করবে না, যদি না ব্যবহারকারী Permission Model-এ সেটিকে DENY করে রাখে।",
+    "category": "Absolute",
+    "priority": "Critical",
+    "violation": "Permission Model-এর বাইরে কোনো অ্যাকশন ব্লক করা।",
+    "recovery": "অ্যাকশনটি ALLOW করুন এবং লগ করুন।"
+  },
+  {
+    "rule_id": "RULE-ABS-002",
+    "title": "No Assumptions",
+    "description": "AI এজেন্ট কখনো অনুমান করবে না। বুঝতে না পারলে ask_user টুল ব্যবহার করে প্রশ্ন করবে।",
+    "category": "Absolute",
+    "priority": "High",
+    "violation": "যাচাই না করে অনুমান নির্ভর কাজ করা।",
+    "recovery": "কাজ থামিয়ে ব্যবহারকারীর কাছে কনফার্মেশন চাওয়া।"
+  },
+  {
+    "rule_id": "RULE-ABS-003",
+    "title": "Deterministic State Management",
+    "description": "প্রতিটি কাজের আগে এবং পরে state/project_state.json এবং state/task_queue.json আপডেট করা বাধ্যতামূলক।",
+    "category": "Architecture",
+    "priority": "Critical",
+    "violation": "স্টেট আপডেট না করে টাস্ক কমপ্লিট মার্ক করা।",
+    "recovery": "স্টেট সিঙ্ক করুন এবং ভেরিফাই করুন।"
+  },
+  {
+    "rule_id": "RULE-ABS-004",
+    "title": "Strict Phase Adherence",
+    "description": "CLAUDE.md-এর Build Order (Section 4) এর ক্রম পরিবর্তন করা যাবে না। Phase 1 শেষ না করে Phase 2 শুরু নিষিদ্ধ।",
+    "category": "Workflow",
+    "priority": "Critical",
+    "violation": "আগের ফেজ শেষ না করে পরের ফেজের কাজ শুরু করা।",
+    "recovery": "বর্তমান কাজ রোলব্যাক করে সঠিক ফেজে ফিরে যাওয়া।"
+  },
+  {
+    "rule_id": "RULE-ABS-005",
+    "title": "No Placeholder Logic",
+    "description": "কোডে কোনো TODO, pass, বা raise NotImplementedError রাখা যাবে না। কোড অবশ্যই ফাংশনাল হতে হবে।",
+    "category": "Coding",
+    "priority": "High",
+    "violation": "প্রোডাকশন কোডে TODO বা pass পাওয়া।",
+    "recovery": "TODO সরিয়ে সম্পূর্ণ লজিক ইমপ্লিমেন্ট করা।"
+  },
+  {
+    "rule_id": "RULE-ABS-006",
+    "title": "Never Remove Code Without Understanding",
+    "description": "কোড মুছার আগে কেন আছে বুঝতে হবে। বুঝতে না পারলে ADR লিখে ব্যবহারকারীর অনুমোদন নিতে হবে।",
+    "category": "Architecture",
+    "priority": "Critical",
+    "violation": "কারণ না বুঝে কোড ডিলিট করা।",
+    "recovery": "Git revert করে কোড ফিরিয়ে আনা।"
+  },
+  {
+    "rule_id": "RULE-ABS-007",
+    "title": "No Random Refactor",
+    "description": "ADR (Architecture Decision Record) ছাড়া রিফ্যাক্টর নিষিদ্ধ। রিফ্যাক্টরের আগে docs/ADR/-এ কারণ লিখতে হবে।",
+    "category": "Architecture",
+    "priority": "Medium",
+    "violation": "ADR ছাড়া কোড রিস্ট্রাকচার করা।",
+    "recovery": "পরিবর্তন রোলব্যাক করে ADR লেখা।"
+  },
+  {
+    "rule_id": "RULE-ABS-008",
+    "title": "No New Libraries Without ADR",
+    "description": "নতুন লাইব্রেরি বা ডিপেন্ডেন্সি যোগের আগে ADR-এ কারণ ও বিকল্প লিখতে হবে।",
+    "category": "Dependencies",
+    "priority": "High",
+    "violation": "ADR ছাড়া নতুন package install করা।",
+    "recovery": "Package সরিয়ে ADR লেখা।"
+  },
+  {
+    "rule_id": "RULE-ABS-009",
+    "title": "Never Break Architecture",
+    "description": "সব পরিবর্তন additive হতে হবে। বিদ্যমান interface ভাঙা যাবে না। নতুন ফিচার যোগ করা যায়, পুরানো সরানো যায় না।",
+    "category": "Architecture",
+    "priority": "Critical",
+    "violation": "বিদ্যমান API বা interface পরিবর্তন করা।",
+    "recovery": "Breaking change রোলব্যাক করে backward-compatible approach নেওয়া।"
+  },
+  {
+    "rule_id": "RULE-ABS-010",
+    "title": "Always Verify Before Commit",
+    "description": "প্রতিটি কমিটের আগে CLAUDE.md Section 8 (Verification Checklist) মেলাতে হবে।",
+    "category": "Quality",
+    "priority": "Critical",
+    "violation": "Verification Checklist না মেলিয়ে কমিট করা।",
+    "recovery": "কমিট amend করে checklist items ঠিক করা।"
+  },
+  {
+    "rule_id": "RULE-ABS-011",
+    "title": "Polyglot Discipline",
+    "description": "প্রতিটি component-এর জন্য CLAUDE.md Section 3-এ নির্ধারিত ভাষা ব্যবহার করতে হবে। Python → AI/Automation, Rust → Performance, Tauri+React → Desktop GUI।",
+    "category": "Architecture",
+    "priority": "High",
+    "violation": "ভুল ভাষায় component লেখা (যেমন Desktop GUI Python-এ)।",
+    "recovery": "সঠিক ভাষায় পুনরায় লেখা।"
+  },
+  {
+    "rule_id": "RULE-ABS-012",
+    "title": "Event Bus Communication Only",
+    "description": "এজেন্টরা কখনো সরাসরি একে অপরকে call করবে না। সব inter-agent communication Event Bus-এর মাধ্যমে হবে।",
+    "category": "Architecture",
+    "priority": "Critical",
+    "violation": "একটি এজেন্ট সরাসরি অন্য এজেন্টের method call করা।",
+    "recovery": "Direct call সরিয়ে Event Bus publish/subscribe ব্যবহার করা।"
+  }
+]

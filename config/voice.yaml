@@ -1,0 +1,64 @@
+# ORION Voice System Configuration v3.0
+# Author: IRFAN
+
+voice_system:
+  enabled: true
+  wake_word: "hey orion"
+  mode: "auto"                        # auto | offline_only | cloud_only
+  push_to_talk: false                 # if true, wake word is disabled, requires button trigger
+  continuous_listening: true          # if true, stays active after wake word until task complete
+  multilingual_support: true          # enable automatic language detection
+
+wake_word:
+  engine: "porcupine"                 # porcupine | openwakeword
+  sensitivity: 0.7
+  porcupine_access_key_env: "PORCUPINE_ACCESS_KEY"
+  fallback_to_openwakeword: true      # if porcupine fails (e.g. key expired)
+
+stt:
+  primary: "local_faster_whisper"
+  cloud_fallback: "openai_whisper"
+  local_faster_whisper:
+    model: "base"                     # tiny | base | small | medium | large-v3
+    language: "auto"                  # auto | en | bn | etc.
+    device: "auto"                    # auto | cpu | cuda
+    compute_type: "int8"
+    vad_filter: true
+  openai_whisper:
+    api_key_env: "OPENAI_API_KEY"
+    model: "whisper-1"
+
+tts:
+  primary: "local_kokoro"
+  cloud_fallback: "edge_tts"
+  local_kokoro:
+    model_path: "models/kokoro/"
+    voice: "af_bella"
+    speed: 1.0
+  local_piper:
+    model_path: "models/piper/"
+    voice: "en_US-lessac-medium"
+  edge_tts:
+    voice: "en-US-GuyNeural"
+  elevenlabs:
+    api_key_env: "ELEVENLABS_API_KEY"
+    voice_id: ""
+
+voice_commands:
+  interrupt_enabled: true             # can interrupt the agent while it is speaking
+  barge_in_sensitivity: 0.5           # how easily agent stops speaking when user starts
+  confirmation_phrase: "confirm"
+  cancel_phrase: "cancel"
+
+audio:
+  sample_rate: 16000
+  channels: 1
+  chunk_size: 1024
+  input_device: "default"
+  output_device: "default"
+  noise_suppression: true             # enable background noise reduction
+  auto_gain_control: true             # automatically adjust mic volume
+
+session:
+  max_silence_seconds: 5              # stop listening after 5s of silence
+  history_memory_turns: 5             # remember last 5 voice turns for context

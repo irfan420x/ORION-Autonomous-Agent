@@ -1,0 +1,120 @@
+# ORION System Configuration v3.0
+# Author: IRFAN
+
+project:
+  name: "ORION"
+  version: "2.0.0"
+  author: "IRFAN"
+  description: "Autonomous Adaptive OS Agent"
+
+# Platform profile — auto-detected at startup
+platform:
+  os: "auto"          # auto | linux | windows | darwin
+  arch: "auto"        # auto | x86_64 | arm64
+  display: "auto"     # auto | x11 | wayland | headless
+
+runtime:
+  mode: "auto"        # auto | full | cpu_only | low_memory | offline | server | safe
+  startup_timeout_seconds: 30
+  shutdown_timeout_seconds: 10
+  heartbeat_interval_seconds: 5
+  max_parallel_agents: 4
+  worker_isolation: true   # run each agent worker in isolated asyncio task group
+
+# Safe/Sandbox mode — restricts destructive actions regardless of permission config
+safe_mode:
+  enabled: false
+  block_shell_sudo: true
+  block_file_delete: true
+  block_network_exploit: true
+  block_package_install: false
+
+operating_modes:
+  full:
+    description: "All modules loaded, GPU available"
+    min_ram_gb: 16
+    requires_gpu: true
+    requires_internet: true
+    modules: ["all"]
+    vision_mode: "local"
+    parallelism_limit: 8
+  cpu_only:
+    description: "No GPU, API-based vision"
+    min_ram_gb: 8
+    requires_gpu: false
+    requires_internet: true
+    modules: ["core", "intelligence", "agents", "tools", "os_control", "browser", "remote"]
+    vision_mode: "cloud_ocr"
+    parallelism_limit: 4
+  low_memory:
+    description: "Minimal modules, small models only"
+    min_ram_gb: 2
+    requires_gpu: false
+    requires_internet: true
+    modules: ["core", "tools", "os_control", "remote"]
+    vision_mode: "disabled"
+    parallelism_limit: 2
+  offline:
+    description: "No internet, local models only"
+    min_ram_gb: 8
+    requires_gpu: false
+    requires_internet: false
+    modules: ["core", "intelligence", "agents", "tools", "os_control", "gui"]
+    vision_mode: "local"
+    parallelism_limit: 4
+  server:
+    description: "Headless, API/Telegram only"
+    min_ram_gb: 4
+    requires_gpu: false
+    requires_internet: true
+    modules: ["core", "intelligence", "agents", "tools", "os_control", "remote"]
+    vision_mode: "cloud_ocr"
+    parallelism_limit: 4
+  safe:
+    description: "Restricted mode — no destructive actions"
+    min_ram_gb: 2
+    requires_gpu: false
+    requires_internet: false
+    modules: ["core", "tools"]
+    vision_mode: "disabled"
+    parallelism_limit: 1
+
+# Per-module resource budget
+resource_budget:
+  llm_inference_max_cpu_percent: 80
+  vision_max_cpu_percent: 60
+  browser_max_memory_mb: 1024
+  agent_max_memory_mb: 512
+  total_ram_reserve_percent: 15   # keep 15% RAM free at all times
+
+# Lazy loading — modules loaded on demand, not at startup
+lazy_loading:
+  enabled: true
+  always_load: ["core", "event_bus", "state"]
+  load_on_demand: ["voice", "vision", "browser", "gui", "learning"]
+
+event_bus:
+  max_queue_size: 10000
+  worker_count: 4
+  retry_failed_events: true
+  max_retries: 3
+
+state:
+  project_state_path: "state/project_state.json"
+  task_queue_path: "state/task_queue.json"
+  checksum_enabled: true
+  auto_save_interval_seconds: 30
+
+logging:
+  level: "INFO"
+  format: "structured"
+  output: "both"
+  log_dir: "logs/"
+  max_file_size_mb: 50
+  max_files: 10
+
+paths:
+  plugins_dir: "plugins/"
+  artifacts_dir: "artifacts/"
+  docs_dir: "docs/"
+  tests_dir: "tests/"

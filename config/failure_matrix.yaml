@@ -1,0 +1,101 @@
+# ORION Error Classification & Recovery Matrix v3.0
+# Author: IRFAN
+
+# Recovery State Machine
+# IDLE → FAILED → ANALYZING → RETRYING/REPLANNING → SUCCESS/ESCALATED
+recovery_state_machine:
+  enabled: true
+  persist_state: true
+  max_recovery_attempts: 5
+
+error_taxonomy:
+  TRANSIENT:
+    description: "Temporary failures that resolve on retry"
+    default_action: "RETRY"
+    max_retries: 3
+    backoff: "exponential"
+    backoff_base_seconds: 2
+    examples: ["Network timeout", "API rate limit", "Connection reset"]
+
+  PERSISTENT:
+    description: "Failures requiring a different approach"
+    default_action: "REPLAN"
+    max_retries: 1
+    examples: ["File not found", "Permission denied", "Invalid syntax"]
+
+  SAFETY_VIOLATION:
+    description: "Actions blocked by permission model"
+    default_action: "TERMINATE"
+    max_retries: 0
+    notify_user: true
+    examples: ["DENY permission triggered", "Unauthorized escalation"]
+
+  LLM_HALLUCINATION:
+    description: "LLM produced invalid or nonsensical output"
+    default_action: "REPLAN"
+    max_retries: 2
+    adjustments: ["lower_temperature", "add_examples", "switch_model"]
+    examples: ["Invalid JSON", "Non-existent tool", "Impossible path"]
+
+  RESOURCE_EXHAUSTION:
+    description: "System running out of resources"
+    default_action: "SCALE_DOWN"
+    notify_user: true
+    examples: ["RAM > 90%", "Disk < 1GB", "CPU > 95%"]
+
+  EXTERNAL_SYSTEM:
+    description: "Third-party service failures"
+    default_action: "RETRY_THEN_FALLBACK"
+    max_retries: 3
+    fallback_to: "local_alternative"
+    examples: ["Cloud API down", "Telegram unreachable"]
+
+  DEPENDENCY_MISSING:
+    description: "Required package or binary not installed"
+    default_action: "AUTO_INSTALL"
+    max_retries: 1
+    examples: ["Python package missing", "System binary missing"]
+
+recovery_protocols:
+  RETRY:
+    steps:
+      - "Wait for backoff duration"
+      - "Verify environment stability"
+      - "Retry the exact same action"
+      - "If max retries exceeded, escalate to REPLAN"
+
+  REPLAN:
+    steps:
+      - "Analyze the error context and error log"
+      - "Search Knowledge Base for similar previous failures"
+      - "Generate alternative approach via Planning Engine"
+      - "Execute new plan"
+      - "If replan fails, escalate to NOTIFY_USER"
+
+  SCALE_DOWN:
+    steps:
+      - "Identify resource-heavy modules"
+      - "Switch to lower Operating Mode (e.g., full → cpu_only)"
+      - "Unload non-essential lazy-loaded modules"
+      - "Notify user of degraded performance"
+
+  AUTO_INSTALL:
+    steps:
+      - "Identify missing dependency and platform"
+      - "Attempt automatic installation (pip/apt/cargo)"
+      - "Verify installation success via health check"
+      - "Retry original action"
+
+  TERMINATE:
+    steps:
+      - "Log the violation with full stack trace"
+      - "Secure all sensitive data"
+      - "Notify user immediately"
+      - "Wait for manual user intervention"
+
+  REPAIR:
+    steps:
+      - "Run database integrity check"
+      - "Restore from last known good checkpoint if corrupted"
+      - "Verify system integrity"
+      - "Resume from checkpoint"

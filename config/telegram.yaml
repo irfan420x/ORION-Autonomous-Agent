@@ -1,0 +1,82 @@
+# ORION Telegram Remote Control Configuration v3.0
+# Author: IRFAN
+
+telegram:
+  enabled: true
+  bot_token_env: "TELEGRAM_BOT_TOKEN"
+  allowed_user_ids: []       # Empty = allow all; add Telegram user IDs to restrict
+  admin_user_id_env: "TELEGRAM_ADMIN_ID"
+
+# Auth & Security
+auth:
+  require_user_id_binding: true      # Only pre-registered user IDs can issue commands
+  signed_commands: true              # Commands must include HMAC signature to prevent replay
+  hmac_secret_env: "TELEGRAM_HMAC_SECRET"
+  session_timeout_minutes: 60        # Auto-logout after inactivity
+  anti_replay_window_seconds: 30     # Reject duplicate commands within this window
+
+# Per-command role mapping
+roles:
+  viewer:
+    description: "Can only view status, screenshots, logs"
+    allowed_commands: ["/status", "/screenshot", "/logs", "/memory"]
+  operator:
+    description: "Can create tasks and stop them"
+    allowed_commands: ["/status", "/screenshot", "/logs", "/memory", "/task", "/stop", "/mode"]
+  admin:
+    description: "Full control including dangerous operations"
+    allowed_commands: ["*"]
+
+# User role assignments (Telegram user_id → role)
+user_roles: {}
+# Example:
+# user_roles:
+#   123456789: "admin"
+#   987654321: "operator"
+
+features:
+  commands: true
+  file_transfer: true
+  file_receive: true
+  file_receive_max_size_mb: 50
+  screenshots: true
+  notifications: true
+  approval_flow: true
+  voice_messages: true
+  remote_screen_streaming: false    # Future feature
+
+notifications:
+  task_completed: true
+  task_failed: true
+  system_error: true
+  approval_required: true
+  daily_report: false
+  daily_report_time: "09:00"
+
+approval_flow:
+  timeout_seconds: 300
+  default_on_timeout: "deny"
+  reminder_after_seconds: 120
+
+# Thread/session memory — remember context across messages
+session_memory:
+  enabled: true
+  max_turns: 20
+  persist_across_restarts: false
+
+commands:
+  prefix: "/"
+  available:
+    - { command: "/status",     description: "Show system status",          role: "viewer" }
+    - { command: "/task",       description: "Create a new task",           role: "operator" }
+    - { command: "/screenshot", description: "Take and send screenshot",    role: "viewer" }
+    - { command: "/stop",       description: "Stop current task",           role: "operator" }
+    - { command: "/mode",       description: "Show/change operating mode",  role: "admin" }
+    - { command: "/memory",     description: "Show memory usage",           role: "viewer" }
+    - { command: "/logs",       description: "Show recent logs",            role: "viewer" }
+    - { command: "/approve",    description: "Approve a pending action",    role: "operator" }
+    - { command: "/deny",       description: "Deny a pending action",       role: "operator" }
+
+rate_limiting:
+  max_commands_per_minute: 10
+  max_file_size_mb: 50

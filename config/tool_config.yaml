@@ -1,0 +1,125 @@
+# ORION Tool Registry Configuration v3.0
+# Author: IRFAN
+
+tool_registry:
+  auto_discovery: true              # Discover new tools in plugins/ directory
+  health_check_interval_seconds: 300
+  sandbox_enabled: true
+  strict_schema_validation: true    # Validate tool inputs against JSON schema
+  capability_driven_discovery: true # Discover tools based on required capabilities
+
+# Health status definitions
+health_check:
+  retry_on_fail: true
+  max_retries: 2
+  disable_on_persistent_fail: true
+
+# Platform-specific tool mapping
+platform_mapping:
+  windows:
+    bash: "git-bash.exe"
+    shell: "powershell.exe"
+  linux:
+    bash: "/bin/bash"
+    shell: "/bin/sh"
+
+categories:
+  - name: "shell"
+    tools:
+      - id: "bash"
+        binary: "/bin/bash"
+        description: "Execute bash commands"
+        timeout_seconds: 300
+        capability: "system_control"
+        schema_path: "schemas/tools/bash.json"
+      - id: "python"
+        binary: "/usr/bin/python3"
+        description: "Execute Python scripts"
+        timeout_seconds: 600
+        capability: "code_execution"
+
+  - name: "network"
+    tools:
+      - id: "nmap"
+        binary: "/usr/bin/nmap"
+        description: "Network scanner"
+        timeout_seconds: 600
+        capability: "network_discovery"
+        dependency: "nmap"
+      - id: "curl"
+        binary: "/usr/bin/curl"
+        description: "HTTP client"
+        timeout_seconds: 60
+        capability: "network_request"
+      - id: "wireshark"
+        binary: "/usr/bin/tshark"
+        description: "Network protocol analyzer"
+        timeout_seconds: 300
+        capability: "network_sniff"
+        dependency: "tshark"
+
+  - name: "security"
+    tools:
+      - id: "metasploit"
+        binary: "/usr/bin/msfconsole"
+        description: "Penetration testing framework"
+        timeout_seconds: 900
+        capability: "exploit"
+        permission_override: "CONFIRM_USER"
+        dependency: "metasploit-framework"
+      - id: "aircrack"
+        binary: "/usr/bin/aircrack-ng"
+        description: "WiFi security auditing"
+        timeout_seconds: 600
+        capability: "wireless_exploit"
+        permission_override: "CONFIRM_USER"
+        dependency: "aircrack-ng"
+
+  - name: "browser"
+    tools:
+      - id: "playwright"
+        description: "Browser automation via Playwright"
+        timeout_seconds: 120
+        capability: "web_automation"
+      - id: "screenshot"
+        description: "Take browser/screen screenshots"
+        timeout_seconds: 10
+        capability: "visual_capture"
+
+  - name: "filesystem"
+    tools:
+      - id: "file_read"
+        description: "Read file contents"
+        timeout_seconds: 10
+        capability: "data_read"
+      - id: "file_write"
+        description: "Write file contents"
+        timeout_seconds: 10
+        capability: "data_write"
+      - id: "file_search"
+        description: "Search files by name or content"
+        timeout_seconds: 30
+        capability: "data_search"
+
+  - name: "vision"
+    tools:
+      - id: "screenshot_analyze"
+        description: "Take and analyze screenshots"
+        timeout_seconds: 30
+        capability: "visual_reasoning"
+      - id: "ocr"
+        description: "Extract text from images"
+        timeout_seconds: 15
+        capability: "text_extraction"
+      - id: "ui_detect"
+        description: "Detect UI elements on screen"
+        timeout_seconds: 20
+        capability: "ui_understanding"
+
+  - name: "git"
+    tools:
+      - id: "git"
+        binary: "/usr/bin/git"
+        description: "Git version control"
+        timeout_seconds: 60
+        capability: "version_control"

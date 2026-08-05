@@ -1,0 +1,70 @@
+# ORION User-Controlled Permission Model v3.0
+# Author: IRFAN
+#
+# Permission Levels:
+#   ALLOW             → Execute immediately, no confirmation
+#   ALLOW_ONCE        → Allow this single execution only, ask again next time
+#   ALLOW_SESSION     → Allow for the current session, revert on restart
+#   SANDBOX_ONLY      → Execute only inside isolated sandbox environment
+#   CONFIRM_USER      → Ask user Yes/No before executing (GUI/CLI prompt)
+#   CONFIRM_TELEGRAM  → Send Telegram approval button before executing
+#   DENY              → Completely blocked
+
+default_permission: "ALLOW"
+
+# File Operations
+file_operations:
+  file_read:              { permission: "ALLOW",         description: "Read any file" }
+  file_write:             { permission: "ALLOW",         description: "Write/create files" }
+  file_delete:            { permission: "CONFIRM_USER",  description: "Delete files" }
+  file_delete_tree:       { permission: "CONFIRM_USER",  description: "Delete entire directory tree" }
+  file_rename:            { permission: "ALLOW",         description: "Rename/move files" }
+
+# Shell Operations
+shell_operations:
+  shell_execute:          { permission: "ALLOW",         description: "Execute shell commands" }
+  shell_sudo:             { permission: "CONFIRM_USER",  description: "Execute commands with sudo" }
+  package_install:        { permission: "CONFIRM_USER",  description: "Install packages (pip/apt/cargo)" }
+  package_uninstall:      { permission: "CONFIRM_USER",  description: "Uninstall packages" }
+
+# Network Operations
+network_operations:
+  network_request:        { permission: "ALLOW",         description: "HTTP/HTTPS requests" }
+  network_scan:           { permission: "ALLOW",         description: "Network scanning (nmap)" }
+  network_exploit:        { permission: "CONFIRM_USER",  description: "Exploitation tools (metasploit)" }
+  network_sniff:          { permission: "CONFIRM_USER",  description: "Packet capture (wireshark/tshark)" }
+
+# Browser Operations
+browser_operations:
+  browser_navigate:       { permission: "ALLOW",         description: "Navigate to URLs" }
+  browser_login:          { permission: "CONFIRM_USER",  description: "Login to websites" }
+  browser_download:       { permission: "ALLOW",         description: "Download files" }
+  browser_form_submit:    { permission: "ALLOW",         description: "Submit web forms" }
+  browser_payment:        { permission: "CONFIRM_USER",  description: "Payment/checkout actions" }
+
+# System Operations
+system_operations:
+  process_kill:           { permission: "CONFIRM_USER",  description: "Kill running processes" }
+  service_restart:        { permission: "CONFIRM_USER",  description: "Restart system services" }
+  system_shutdown:        { permission: "CONFIRM_USER",  description: "Shutdown/reboot system" }
+  registry_edit:          { permission: "CONFIRM_USER",  description: "Edit system registry (Windows)" }
+
+# Credential & Security Operations (HIGH RISK)
+credential_operations:
+  credential_read:        { permission: "CONFIRM_USER",  description: "Read stored credentials/API keys" }
+  credential_write:       { permission: "CONFIRM_USER",  description: "Store new credentials" }
+  credential_delete:      { permission: "CONFIRM_USER",  description: "Delete credentials" }
+  vault_unlock:           { permission: "CONFIRM_USER",  description: "Unlock secrets vault" }
+
+# Remote Control Permissions
+remote_operations:
+  telegram_execute:       { permission: "CONFIRM_TELEGRAM", description: "Execute commands from Telegram" }
+  api_execute:            { permission: "ALLOW",            description: "Execute from authenticated REST API" }
+  websocket_execute:      { permission: "ALLOW",            description: "Execute from WebSocket session" }
+
+# Autonomous Task Permissions
+autonomous_operations:
+  watcher_trigger:        { permission: "ALLOW",         description: "Watchers triggering tasks automatically" }
+  scheduled_task:         { permission: "ALLOW",         description: "Scheduled tasks running automatically" }
+  auto_maintenance:       { permission: "ALLOW",         description: "System auto-maintenance tasks" }
+  auto_install_dep:       { permission: "ALLOW",         description: "Auto-install missing dependencies" }
