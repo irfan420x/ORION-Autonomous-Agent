@@ -9,6 +9,7 @@ Usage:
 """
 
 import asyncio
+import json
 import logging
 import time
 from typing import Dict, List, Optional
@@ -68,28 +69,286 @@ class OrionTelegramBot:
         self._conversation_history: Dict[int, List[Dict[str, str]]] = {}
         self._max_history: int = 20
         
-        # ORION system prompt
-        self._system_prompt = """You are ORION, an Autonomous Adaptive OS Agent created by IRFAN. You are a powerful AI assistant that can:
+        # ORION system prompt with tool awareness
+        self._system_prompt = """You are ORION, an Autonomous Adaptive OS Agent created by IRFAN. You are a powerful AI assistant integrated into a Linux system.
 
-- Help with system administration and monitoring
-- Execute tasks and manage workflows
-- Analyze data and provide insights
-- Control the computer remotely
-- Learn from experiences
+YOUR CAPABILITIES (use these tools when the user asks):
+1. **System Info** - Check CPU, RAM, disk, processes, network
+2. **Health Check** - Check system health and services
+3. **Memory** - Remember and recall information
+4. **Tasks** - Add, list, complete tasks
+5. **State** - Check and change agent state
+6. **Runtime** - Check runtime mode, modules, resources
+7. **File Operations** - Read, write, search files
+8. **Process Management** - List, kill processes
 
-Your personality:
+YOUR PERSONALITY:
 - Helpful, friendly, and professional
 - Concise but thorough responses
 - Use emojis appropriately
 - Respond in the same language the user writes in (Bengali/English)
 - If you can't do something, say so honestly
+- When you use a tool, explain what you did
 
-Current capabilities: System monitoring, task management, memory, health checks, runtime control.
-You are running on a Linux system with 8 cores and 15GB RAM.
+IMPORTANT RULES:
+- Always use tools when the user asks for system information
+- Don't make up information - use tools to get real data
+- Be proactive - if a task needs multiple steps, do them all
+- Keep responses under 500 words unless asked for more detail"""
 
-Keep responses under 500 words unless the user asks for detailed information."""
+        # Tool definitions for LLM function calling
+        self._tools = [
+            {
+                "name": "get_system_info",
+                "description": "Get system information: CPU, RAM, disk, processes. Use when user asks about system status, resources, or performance.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            },
+            {
+                "name": "get_health_status",
+                "description": "Check system health and service status. Use when user asks about health, services, or system stability.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            },
+            {
+                "name": "get_runtime_status",
+                "description": "Get ORION runtime status: operating mode, loaded modules, resource usage. Use when user asks about ORION status or capabilities.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            },
+            {
+                "name": "remember",
+                "description": "Store information in memory for later recall. Use when user says 'remember this' or shares important info.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "key": {"type": "string", "description": "What to remember (e.g., 'user_name', 'project_deadline')"},
+                        "value": {"type": "string", "description": "The information to store"}
+                    },
+                    "required": ["key", "value"]
+                }
+            },
+            {
+                "name": "recall",
+                "description": "Recall stored information from memory. Use when user asks 'what do you remember about X' or 'recall X'.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "What to recall (e.g., 'user_name', 'project info')"}
+                    },
+                    "required": ["query"]
+                }
+            },
+            {
+                "name": "add_task",
+                "description": "Add a new task to the task queue. Use when user wants to create or schedule a task.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "goal": {"type": "string", "description": "Task description/goal"}
+                    },
+                    "required": ["goal"]
+                }
+            },
+            {
+                "name": "list_tasks",
+                "description": "List all tasks in the queue. Use when user asks about tasks, todo list, or pending work.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            },
+            {
+                "name": "run_shell_command",
+                "description": "Execute a shell command on the system. Use when user asks to run a command, check file, or do system operation. ONLY use safe commands.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "command": {"type": "string", "description": "Shell command to execute (must be safe)"}
+                    },
+                    "required": ["command"]
+                }
+            },
+            {
+                "name": "search_memory",
+                "description": "Search through all memory tiers. Use when user asks to find information stored in memory.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Search query"}
+                    },
+                    "required": ["query"]
+                }
+            },
+            {
+                "name": "get_time_date",
+                "description": "Get current time and date. Use when user asks about time, date, or day.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {},
+                    "required": []
+                }
+            }
+        ]
         
         logger.info("OrionTelegramBot initialized for user %d", allowed_user_id)
+    
+    # ========================================================================
+    # Tool Execution (called by LLM)
+    # ========================================================================
+    
+    async def _execute_tool(self, tool_name: str, arguments: Dict[str, Any]) -> str:
+        """Execute a tool and return the result as string."""
+        try:
+            if tool_name == "get_system_info":
+                return await self._tool_system_info()
+            elif tool_name == "get_health_status":
+                return await self._tool_health_status()
+            elif tool_name == "get_runtime_status":
+                return await self._tool_runtime_status()
+            elif tool_name == "remember":
+                return await self._tool_remember(arguments["key"], arguments["value"])
+            elif tool_name == "recall":
+                return await self._tool_recall(arguments["query"])
+            elif tool_name == "add_task":
+                return await self._tool_add_task(arguments["goal"])
+            elif tool_name == "list_tasks":
+                return await self._tool_list_tasks()
+            elif tool_name == "run_shell_command":
+                return await self._tool_run_command(arguments["command"])
+            elif tool_name == "search_memory":
+                return await self._tool_search_memory(arguments["query"])
+            elif tool_name == "get_time_date":
+                import datetime
+                now = datetime.datetime.now()
+                return f"Current time: {now.strftime('%Y-%m-%d %H:%M:%S')} ({now.strftime('%A')})"
+            else:
+                return f"Unknown tool: {tool_name}"
+        except Exception as e:
+            return f"Tool error ({tool_name}): {str(e)}"
+    
+    async def _tool_system_info(self) -> str:
+        """Get system information."""
+        import psutil
+        cpu = psutil.cpu_percent(interval=0)
+        ram = psutil.virtual_memory()
+        disk = psutil.disk_usage("/")
+        
+        return (
+            f"📊 **System Information:**\n"
+            f"• CPU: {cpu}% ({psutil.cpu_count()} cores)\n"
+            f"• RAM: {ram.percent}% ({round(ram.used/1024**3, 1)}/{round(ram.total/1024**3, 1)} GB)\n"
+            f"• Disk: {disk.percent}% ({round(disk.used/1024**3, 1)}/{round(disk.total/1024**3, 1)} GB)\n"
+            f"• Processes: {len(psutil.pids())}\n"
+            f"• Uptime: {round(psutil.time.time() - psutil.boot_time())}s"
+        )
+    
+    async def _tool_health_status(self) -> str:
+        """Check health status."""
+        if self.health_monitor:
+            report = await self.health_monitor.check_all()
+            lines = [f"🏥 **Health: {report.overall_status.value}**\n"]
+            for svc in report.services:
+                icon = "🟢" if svc.status.value == "HEALTHY" else "🔴"
+                lines.append(f"{icon} {svc.service_name}: {svc.status.value}")
+            return "\n".join(lines)
+        return "❌ Health monitor not available"
+    
+    async def _tool_runtime_status(self) -> str:
+        """Get runtime status."""
+        if self.runtime:
+            stats = self.runtime.get_stats()
+            return (
+                f"⚡ **Runtime Status:**\n"
+                f"• Mode: {stats['current_mode']}\n"
+                f"• Modules: {stats['loaded_module_count']}/{stats['total_module_count']}\n"
+                f"• Uptime: {stats['uptime_seconds']:.0f}s\n"
+                f"• Feasible modes: {', '.join(stats['feasible_modes'])}"
+            )
+        return "❌ Runtime not available"
+    
+    async def _tool_remember(self, key: str, value: str) -> str:
+        """Store in memory."""
+        if self.memory_manager:
+            await self.memory_manager.remember(key, value, memory_type="long_term")
+            return f"✅ Remembered: {key} = {value}"
+        return "❌ Memory not available"
+    
+    async def _tool_recall(self, query: str) -> str:
+        """Recall from memory."""
+        if self.memory_manager:
+            results = await self.memory_manager.recall_all(query)
+            if results:
+                items = [f"• {r.get('key', '?')}: {r.get('value', '?')}" for r in results[:5]]
+                return f"🧠 **Recalled:**\n" + "\n".join(items)
+            return f"Nothing found for: {query}"
+        return "❌ Memory not available"
+    
+    async def _tool_add_task(self, goal: str) -> str:
+        """Add a task."""
+        if self.task_queue:
+            import time as t
+            from orion.contracts.agent_contracts import Task, TaskID
+            task_id = TaskID(f"task_{int(t.time())}")
+            task = Task(task_id=task_id, goal=goal, created_at=t.time(), updated_at=t.time())
+            await self.task_queue.add_task(task)
+            return f"✅ Task added: {goal} (ID: {task_id})"
+        return "❌ Task queue not available"
+    
+    async def _tool_list_tasks(self) -> str:
+        """List tasks."""
+        if self.task_queue:
+            tasks = await self.task_queue.get_all_tasks()
+            if not tasks:
+                return "📋 No tasks in queue"
+            lines = ["📋 **Tasks:**"]
+            for t in tasks[:10]:
+                lines.append(f"• {t.task_id}: {t.goal} [{t.status}]")
+            return "\n".join(lines)
+        return "❌ Task queue not available"
+    
+    async def _tool_run_command(self, command: str) -> str:
+        """Run a safe shell command."""
+        # Safety: block dangerous commands
+        dangerous = ["rm -rf", "mkfs", "dd if=", "> /dev/", "chmod 777", "shutdown", "reboot"]
+        for d in dangerous:
+            if d in command.lower():
+                return f"⛔ Blocked dangerous command: {command}"
+        
+        import asyncio
+        try:
+            proc = await asyncio.create_subprocess_shell(
+                command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=10)
+            output = stdout.decode()[:1000] or stderr.decode()[:500] or "(no output)"
+            return f"💻 `{command}`\n```\n{output}\n```"
+        except asyncio.TimeoutError:
+            return f"⏱️ Command timed out: {command}"
+        except Exception as e:
+            return f"❌ Command error: {e}"
+    
+    async def _tool_search_memory(self, query: str) -> str:
+        """Search memory."""
+        if self.memory_manager:
+            results = await self.memory_manager.search_all(query)
+            if results:
+                items = [f"• {r.get('key', '?')}: {str(r.get('value', '?'))[:100]}" for r in results[:5]]
+                return f"🔍 **Search results:**\n" + "\n".join(items)
+            return f"No results for: {query}"
+        return "❌ Memory not available"
     
     # ========================================================================
     # Basic Commands
@@ -877,7 +1136,7 @@ Keep responses under 500 words unless the user asks for detailed information."""
         await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
     
     # ========================================================================
-    # Message Handler
+    # Message Handler (with Tool Calling)
     # ========================================================================
     
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -905,7 +1164,7 @@ Keep responses under 500 words unless the user asks for detailed information."""
             source="telegram_bot",
         ))
         
-        # If LLM is available, think and respond
+        # If LLM is available, think and respond with tools
         if self.llm_client:
             try:
                 # Show typing indicator
@@ -925,26 +1184,73 @@ Keep responses under 500 words unless the user asks for detailed information."""
                     history = history[-self._max_history:]
                     self._conversation_history[user_id] = history
                 
-                # Build messages for LLM
-                messages = [LLMMessage("system", self._system_prompt)]
-                for msg in history:
-                    messages.append(LLMMessage(msg["role"], msg["content"]))
-                
-                # Call LLM
-                response = await self.llm_client.chat(
+                # Call LLM with tools
+                response = await self.llm_client.chat_with_tools(
                     prompt=message_text,
+                    tools=self._tools,
                     system=self._system_prompt,
                     model="mimo-v2.5-pro",
                 )
                 
-                assistant_response = response.content
+                # Check if LLM wants to use tools
+                raw = response.raw or {}
+                choice = raw.get("choices", [{}])[0]
+                message = choice.get("message", {})
+                tool_calls = message.get("tool_calls", [])
                 
-                # Add assistant response to history
-                history.append({"role": "assistant", "content": assistant_response})
+                if tool_calls:
+                    # Execute tools and get results
+                    tool_results = []
+                    for call in tool_calls:
+                        func = call.get("function", {})
+                        tool_name = func.get("name", "")
+                        args_str = func.get("arguments", "{}")
+                        
+                        try:
+                            arguments = json.loads(args_str) if args_str else {}
+                        except:
+                            arguments = {}
+                        
+                        # Show typing while executing
+                        await update.message.chat.send_action("typing")
+                        
+                        # Execute the tool
+                        result = await self._execute_tool(tool_name, arguments)
+                        tool_results.append({"tool": tool_name, "result": result})
+                        
+                        logger.info("Tool executed: %s", tool_name)
+                    
+                    # Build tool results message for LLM
+                    tool_msg = "Tool results:\n"
+                    for tr in tool_results:
+                        tool_msg += f"\n### {tr['tool']}:\n{tr['result']}\n"
+                    
+                    # Add tool results to history
+                    history.append({"role": "assistant", "content": "I used tools to get information."})
+                    history.append({"role": "user", "content": f"Tool results:\n{tool_msg}\n\nNow respond to the user's original message using this information."})
+                    
+                    # Get final response from LLM
+                    await update.message.chat.send_action("typing")
+                    final_response = await self.llm_client.chat(
+                        prompt=f"Tool results:\n{tool_msg}\n\nUser asked: {message_text}\n\nRespond naturally using the tool results.",
+                        system=self._system_prompt,
+                        model="mimo-v2.5-pro",
+                    )
+                    
+                    assistant_response = final_response.content
+                    
+                    # Add to history
+                    history.append({"role": "assistant", "content": assistant_response})
+                else:
+                    # No tool calls, just respond
+                    assistant_response = message.get("content", response.content)
+                    
+                    # Add to history
+                    history.append({"role": "assistant", "content": assistant_response})
+                
                 self._conversation_history[user_id] = history
                 
                 # Send response
-                # Split long messages (Telegram limit: 4096 chars)
                 if len(assistant_response) > 4000:
                     chunks = [assistant_response[i:i+4000] for i in range(0, len(assistant_response), 4000)]
                     for chunk in chunks:
@@ -962,7 +1268,6 @@ Keep responses under 500 words unless the user asks for detailed information."""
                     parse_mode="Markdown"
                 )
         else:
-            # No LLM available, echo back
             await update.message.reply_text(
                 f"📨 Received: _{message_text}_\n\n🤖 LLM not connected. Use /help to see commands.",
                 parse_mode="Markdown"
