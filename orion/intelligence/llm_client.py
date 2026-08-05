@@ -99,8 +99,8 @@ class ModelConfig:
 # Default model configurations
 DEFAULT_MODELS: Dict[str, ModelConfig] = {
     "mimo-v2.5-pro": ModelConfig(
-        model_id="xiaomi/mimo-v2.5-pro",
-        base_url="https://openrouter.ai/api/v1",
+        model_id="mimo-v2.5-pro",
+        base_url="https://api.xiaomimimo.com/v1",
         api_key="sk-s6jpfk7yts8kasyjdjqlzvwbv08e2mtc6g943uqhltcpgz2f",
         max_tokens=4096,
         temperature=0.7,
@@ -109,8 +109,8 @@ DEFAULT_MODELS: Dict[str, ModelConfig] = {
         priority=1,
     ),
     "mimo-v2.5": ModelConfig(
-        model_id="xiaomi/mimo-v2.5",
-        base_url="https://openrouter.ai/api/v1",
+        model_id="mimo-v2.5",
+        base_url="https://api.xiaomimimo.com/v1",
         api_key="sk-s6jpfk7yts8kasyjdjqlzvwbv08e2mtc6g943uqhltcpgz2f",
         max_tokens=4096,
         temperature=0.7,
