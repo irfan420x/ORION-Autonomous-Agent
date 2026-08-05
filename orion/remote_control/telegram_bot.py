@@ -29,6 +29,8 @@ from orion.core.state.state_machine import StateMachine, State
 from orion.core.state.task_queue import TaskQueueEngine
 from orion.core.runtime.runtime import AdaptiveRuntime
 from orion.memory.memory_manager import MemoryManager
+from orion.reliability.health_monitor import HealthMonitor
+from orion.reliability.self_healer import SelfHealer
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +47,8 @@ class OrionTelegramBot:
         task_queue: Optional[TaskQueueEngine] = None,
         memory_manager: Optional[MemoryManager] = None,
         runtime: Optional[AdaptiveRuntime] = None,
+        health_monitor: Optional[HealthMonitor] = None,
+        self_healer: Optional[SelfHealer] = None,
     ):
         self.token = token
         self.allowed_user_id = allowed_user_id
@@ -53,6 +57,8 @@ class OrionTelegramBot:
         self.task_queue = task_queue
         self.memory_manager = memory_manager
         self.runtime = runtime
+        self.health_monitor = health_monitor
+        self.self_healer = self_healer
         self.app: Optional[Application] = None
         
         logger.info("OrionTelegramBot initialized for user %d", allowed_user_id)
@@ -778,6 +784,68 @@ class OrionTelegramBot:
         await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
     
     # ========================================================================
+    # Health & Self-Healing Commands
+    # ========================================================================
+    
+    async def health_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle /health command - show system health."""
+        if not self._is_allowed(update):
+            return
+        
+        if not self.health_monitor:
+            await update.message.reply_text("❌ Health Monitor not initialized")
+            return
+        
+        report = await self.health_monitor.check_all()
+        
+        status_icons = {
+            "HEALTHY": "🟢",
+            "DEGRADED": "🟡",
+            "UNHEALTHY": "🔴",
+            "CRASHED": "💥",
+            "UNKNOWN": "⚪",
+        }
+        
+        lines = [f"{status_icons.get(report.overall_status.value, '⚪')} **System Health: {report.overall_status.value}**\n"]
+        
+        for svc in report.services:
+            icon = status_icons.get(svc.status.value, '⚪')
+            lines.append(f"{icon} `{svc.service_name}`: {svc.status.value}")
+        
+        lines.append(f"\n📊 CPU: {report.cpu_percent}% | RAM: {report.ram_percent}% | Disk: {report.disk_percent}%")
+        lines.append(f"✅ Passed: {report.checks_passed} | ❌ Failed: {report.checks_failed}")
+        
+        await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+    
+    async def healer_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle /healer command - show self-healer status."""
+        if not self._is_allowed(update):
+            return
+        
+        if not self.self_healer:
+            await update.message.reply_text("❌ Self-Healer not initialized")
+            return
+        
+        stats = self.self_healer.get_stats()
+        
+        lines = ["🛡️ **Self-Healer Status**\n"]
+        lines.append(f"• Running: {'✅' if stats['running'] else '❌'}")
+        lines.append(f"• Total recoveries: {stats['total_recoveries']}")
+        lines.append(f"• Successful: {stats['successful_recoveries']}")
+        lines.append(f"• Failed: {stats['failed_recoveries']}")
+        lines.append(f"• Success rate: {stats['success_rate']}%")
+        lines.append(f"• Max attempts: {stats['max_attempts']}")
+        
+        # Show recent history
+        history = self.self_healer.get_recovery_history(5)
+        if history:
+            lines.append("\n📋 **Recent Recoveries:**")
+            for r in history:
+                lines.append(f"  • {r['service_name']}: {r['action_taken']} ({'✅' if r['success'] else '❌'})")
+        
+        await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+    
+    # ========================================================================
     # Message Handler
     # ========================================================================
     
@@ -889,6 +957,10 @@ class OrionTelegramBot:
         self.app.add_handler(CommandHandler("resources", self.resources_command))
         self.app.add_handler(CommandHandler("setmode", self.setmode_command))
         self.app.add_handler(CommandHandler("modules", self.modules_command))
+        
+        # Health & Self-Healing commands
+        self.app.add_handler(CommandHandler("health", self.health_command))
+        self.app.add_handler(CommandHandler("healer", self.healer_command))
         
         # Message handler
         self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))

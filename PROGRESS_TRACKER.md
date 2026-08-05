@@ -3,8 +3,8 @@
 
 ## Current Status
 - **Current Phase:** Phase 1 (Core Foundation)
-- **Current Milestone:** M1.4 (Adaptive Runtime) ✅ COMPLETE
-- **Overall Completion:** 40%
+- **Current Milestone:** M1.5 (Self-Healing Architecture) ✅ COMPLETE
+- **Overall Completion:** 50%
 
 ---
 
@@ -27,16 +27,21 @@
 - [x] SemanticMemory (vector search, mock embeddings)
 - [x] MemoryManager (unified interface)
 - [x] 33 unit tests passing
-- [x] Telegram commands for memory
 
 ### M1.4: Adaptive Runtime ✅ COMPLETE
 - [x] AdaptiveRuntime (hardware detection, mode negotiation)
 - [x] Resource monitoring (CPU, RAM, disk with thresholds)
-- [x] Operating mode switching (full, cpu_only, low_memory, offline, server, safe)
-- [x] Module priority management (critical, high, medium, low)
-- [x] Auto-switch to low_memory on RAM critical
+- [x] Module priority management
 - [x] 42 unit tests passing
-- [x] Telegram commands: /runtime, /resources, /modules, /setmode
+
+### M1.5: Self-Healing Architecture ✅ COMPLETE
+- [x] HealthMonitor (periodic health checks, service monitoring)
+- [x] SelfHealer (automated recovery, backup/restore)
+- [x] Reliability contracts (Pydantic models)
+- [x] Critical file integrity checks
+- [x] Recovery strategies: restart, restore, reconnect, notify, escalate
+- [x] 47 unit tests passing
+- [x] Telegram commands: /health, /healer
 
 ---
 
@@ -48,6 +53,7 @@
 ### Memory: /memory, /remember, /recall, /forget, /searchmemory
 ### EventBus: /events, /stats
 ### Adaptive Runtime: /runtime, /resources, /modules, /setmode
+### Health & Healing: /health, /healer
 
 ---
 
@@ -56,4 +62,5 @@
 - M1.2: 23 tests ✅
 - M1.3: 33 tests ✅
 - M1.4: 42 tests ✅
-- **Total: 126 tests passing**
+- M1.5: 47 tests ✅
+- **Total: 173 tests passing**
