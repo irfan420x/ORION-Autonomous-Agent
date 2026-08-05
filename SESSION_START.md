@@ -6,7 +6,7 @@
 - **Phase 3** — ✅ COMPLETE (74 tests)
 - **Phase 4** — 🔄 50% (M4.1, M4.2 done)
 - **Next:** M4.3 Plugin SDK
-- **Total:** 403 tests | **Rust:** Compiled ✅
+- **Total:** 423 tests | **Rust:** Compiled ✅
 
 ## Phase 4 Progress
 - M4.1: Core Agents ✅ (18 tests)
@@ -14,11 +14,16 @@
 - M4.3: Plugin SDK ⏳ NEXT
 - M4.4: Permission Model ⏳
 
+## Recent Additions
+- Advanced Memory System (graph, consolidation, reflection)
+- LLM tool calling in Telegram bot (11 tools)
+- Xiaomi mimo API integration (api.xiaomimimo.com)
+
 ## Key Files
 - `orion/agents/base_agent.py` — BaseAgent
-- `orion/agents/orchestrator_agent.py` — Coordinator
-- `orion/agents/executor_agent.py` — Task executor
 - `orion/skills/skill_registry.py` — Skill system
+- `orion/memory/advanced_memory.py` — Advanced memory
+- `orion/intelligence/llm_client.py` — LLM client
 
 ## Rules
 1. **Always read SESSION_START.md before starting work**
@@ -27,4 +32,4 @@
 4. Update this file at session end
 
 ---
-*Last updated: M4.2 Skill System complete*
+*Last updated: Advanced Memory + M4.2 complete*
