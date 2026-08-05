@@ -14,11 +14,10 @@
 - M4.3: Plugin SDK ✅ (23 tests)
 - M4.4: Permission Model ⏳ NEXT
 
-## Key Files
-- `orion/agents/base_agent.py` — BaseAgent
-- `orion/skills/skill_registry.py` — Skill system
-- `orion/plugins/plugin_loader.py` — Plugin SDK
-- `orion/memory/advanced_memory.py` — Advanced memory
+## Recent Additions
+- Advanced Memory System (graph, consolidation, reflection)
+- LLM tool calling with action keyword detection
+- Xiaomi mimo API integration
 
 ## Rules
 1. **Always read SESSION_START.md before starting work**
