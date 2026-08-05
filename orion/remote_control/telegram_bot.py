@@ -91,10 +91,13 @@ YOUR PERSONALITY:
 - When you use a tool, explain what you did
 
 IMPORTANT RULES:
-- Always use tools when the user asks for system information
+- ALWAYS use tools when the user asks for system information or actions
+- When user asks to CREATE a file, use the create_file tool immediately - do NOT just show code
+- When user asks to RUN a command, use run_shell_command tool
 - Don't make up information - use tools to get real data
 - Be proactive - if a task needs multiple steps, do them all
-- Keep responses under 500 words unless asked for more detail"""
+- Keep responses under 500 words unless asked for more detail
+- When you use a tool, briefly explain what you did"""
 
         # Tool definitions for LLM function calling
         self._tools = [
@@ -169,6 +172,18 @@ IMPORTANT RULES:
                 }
             },
             {
+                "name": "create_file",
+                "description": "Create a file with content. Use when user asks to create, write, or make a file. ALWAYS use this tool when user asks to create a file - do NOT just show code, actually create it.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {"type": "string", "description": "Full file path (e.g., /home/irfan/Desktop/file.py)"},
+                        "content": {"type": "string", "description": "File content to write"}
+                    },
+                    "required": ["path", "content"]
+                }
+            },
+            {
                 "name": "run_shell_command",
                 "description": "Execute a shell command on the system. Use when user asks to run a command, check file, or do system operation. ONLY use safe commands.",
                 "parameters": {
@@ -224,6 +239,8 @@ IMPORTANT RULES:
                 return await self._tool_add_task(arguments["goal"])
             elif tool_name == "list_tasks":
                 return await self._tool_list_tasks()
+            elif tool_name == "create_file":
+                return await self._tool_create_file(arguments["path"], arguments["content"])
             elif tool_name == "run_shell_command":
                 return await self._tool_run_command(arguments["command"])
             elif tool_name == "search_memory":
@@ -349,6 +366,27 @@ IMPORTANT RULES:
                 return f"🔍 **Search results:**\n" + "\n".join(items)
             return f"No results for: {query}"
         return "❌ Memory not available"
+    
+    async def _tool_create_file(self, path: str, content: str) -> str:
+        """Create a file with content."""
+        import os
+        
+        # Expand ~ to home directory
+        path = os.path.expanduser(path)
+        
+        # Create directory if needed
+        dir_path = os.path.dirname(path)
+        if dir_path:
+            os.makedirs(dir_path, exist_ok=True)
+        
+        with open(path, 'w') as f:
+            f.write(content)
+        
+        # Make executable if it's a script
+        if path.endswith('.py') or path.endswith('.sh'):
+            os.chmod(path, 0o755)
+        
+        return f"✅ File created: {path} ({len(content)} bytes)"
     
     # ========================================================================
     # Basic Commands
