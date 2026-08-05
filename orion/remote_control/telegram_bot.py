@@ -11,7 +11,7 @@ Usage:
 import asyncio
 import logging
 import time
-from typing import Optional
+from typing import Dict, List, Optional
 
 from telegram import Update
 from telegram.ext import (
@@ -31,6 +31,7 @@ from orion.core.runtime.runtime import AdaptiveRuntime
 from orion.memory.memory_manager import MemoryManager
 from orion.reliability.health_monitor import HealthMonitor
 from orion.reliability.self_healer import SelfHealer
+from orion.intelligence.llm_client import LLMClient, LLMMessage
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,7 @@ class OrionTelegramBot:
         runtime: Optional[AdaptiveRuntime] = None,
         health_monitor: Optional[HealthMonitor] = None,
         self_healer: Optional[SelfHealer] = None,
+        llm_client: Optional[LLMClient] = None,
     ):
         self.token = token
         self.allowed_user_id = allowed_user_id
@@ -59,7 +61,33 @@ class OrionTelegramBot:
         self.runtime = runtime
         self.health_monitor = health_monitor
         self.self_healer = self_healer
+        self.llm_client = llm_client
         self.app: Optional[Application] = None
+        
+        # Conversation history (per user)
+        self._conversation_history: Dict[int, List[Dict[str, str]]] = {}
+        self._max_history: int = 20
+        
+        # ORION system prompt
+        self._system_prompt = """You are ORION, an Autonomous Adaptive OS Agent created by IRFAN. You are a powerful AI assistant that can:
+
+- Help with system administration and monitoring
+- Execute tasks and manage workflows
+- Analyze data and provide insights
+- Control the computer remotely
+- Learn from experiences
+
+Your personality:
+- Helpful, friendly, and professional
+- Concise but thorough responses
+- Use emojis appropriately
+- Respond in the same language the user writes in (Bengali/English)
+- If you can't do something, say so honestly
+
+Current capabilities: System monitoring, task management, memory, health checks, runtime control.
+You are running on a Linux system with 8 cores and 15GB RAM.
+
+Keep responses under 500 words unless the user asks for detailed information."""
         
         logger.info("OrionTelegramBot initialized for user %d", allowed_user_id)
     
@@ -858,13 +886,15 @@ class OrionTelegramBot:
         
         user = update.effective_user
         message_text = update.message.text
+        user_id = user.id
         
         logger.info("Message from %s: %s", user.first_name, message_text[:50])
         
+        # Publish event to EventBus
         await self.event_bus.publish(Event(
             event_type="telegram.message",
             payload={
-                "user_id": user.id,
+                "user_id": user_id,
                 "username": user.username,
                 "first_name": user.first_name,
                 "message": message_text,
@@ -875,10 +905,68 @@ class OrionTelegramBot:
             source="telegram_bot",
         ))
         
-        await update.message.reply_text(
-            f"📨 Received: _{message_text}_\n\nUse /help to see commands.",
-            parse_mode="Markdown"
-        )
+        # If LLM is available, think and respond
+        if self.llm_client:
+            try:
+                # Show typing indicator
+                await update.message.chat.send_action("typing")
+                
+                # Get or create conversation history
+                if user_id not in self._conversation_history:
+                    self._conversation_history[user_id] = []
+                
+                history = self._conversation_history[user_id]
+                
+                # Add user message to history
+                history.append({"role": "user", "content": message_text})
+                
+                # Trim history if too long
+                if len(history) > self._max_history:
+                    history = history[-self._max_history:]
+                    self._conversation_history[user_id] = history
+                
+                # Build messages for LLM
+                messages = [LLMMessage("system", self._system_prompt)]
+                for msg in history:
+                    messages.append(LLMMessage(msg["role"], msg["content"]))
+                
+                # Call LLM
+                response = await self.llm_client.chat(
+                    prompt=message_text,
+                    system=self._system_prompt,
+                    model="mimo-v2.5-pro",
+                )
+                
+                assistant_response = response.content
+                
+                # Add assistant response to history
+                history.append({"role": "assistant", "content": assistant_response})
+                self._conversation_history[user_id] = history
+                
+                # Send response
+                # Split long messages (Telegram limit: 4096 chars)
+                if len(assistant_response) > 4000:
+                    chunks = [assistant_response[i:i+4000] for i in range(0, len(assistant_response), 4000)]
+                    for chunk in chunks:
+                        await update.message.reply_text(chunk, parse_mode="Markdown")
+                else:
+                    await update.message.reply_text(assistant_response, parse_mode="Markdown")
+                
+                logger.info("LLM response: model=%s tokens=%d/%d", 
+                          response.model, response.tokens_input, response.tokens_output)
+            
+            except Exception as e:
+                logger.error("LLM error: %s", e)
+                await update.message.reply_text(
+                    f"⚠️ Thinking error: {str(e)[:100]}\n\nUse /help to see commands.",
+                    parse_mode="Markdown"
+                )
+        else:
+            # No LLM available, echo back
+            await update.message.reply_text(
+                f"📨 Received: _{message_text}_\n\n🤖 LLM not connected. Use /help to see commands.",
+                parse_mode="Markdown"
+            )
     
     # ========================================================================
     # Response Handler
@@ -990,6 +1078,12 @@ def main():
     memory_manager = MemoryManager(event_bus)
     runtime = AdaptiveRuntime(event_bus)
     
+    # Initialize LLM Client (mimo-v2.5-pro via OpenRouter)
+    llm_client = LLMClient(
+        event_bus=event_bus,
+        default_model="mimo-v2.5-pro",
+    )
+    
     bot = OrionTelegramBot(
         token=BOT_TOKEN,
         allowed_user_id=ALLOWED_USER_ID,
@@ -998,6 +1092,7 @@ def main():
         task_queue=task_queue,
         memory_manager=memory_manager,
         runtime=runtime,
+        llm_client=llm_client,
     )
     
     try:
