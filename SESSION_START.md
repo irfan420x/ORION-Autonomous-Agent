@@ -6,8 +6,13 @@
 - **Phase 3** — ✅ COMPLETE (74 tests)
 - **Phase 4** — ✅ COMPLETE (84 tests)
 - **Phase 5** — 🔄 90% (M5.1–M5.3 done)
-- **Next:** M5.4 Vision System (final Phase 5)
-- **Total:** 504 tests | **Rust:** Compiled ✅ | **GUI:** PyQt6 ✅
+- **Next:** M5.4 Vision System
+- **Total:** 529 tests | **Rust:** Compiled ✅ | **GUI:** PyQt6 ✅
+
+## Core Upgrades (Hermes-inspired)
+- Error Classifier: 5 categories with retry strategies
+- Tool Dispatcher: budget management, concurrent execution
+- Message Manager: context window, role tracking
 
 ## Phase 5 Progress
 - M5.1: OS Control + Desktop GUI ✅
@@ -16,9 +21,9 @@
 - M5.4: Vision System ⏳ NEXT
 
 ## Key Files
-- `orion/gui/__main__.py` — GUI entry point
-- `orion/gui_automation/automation.py` — GUI automation
-- `orion/browser/browser_automation.py` — Browser automation
+- `orion/core/error_classifier.py` — Error handling
+- `orion/core/tool_dispatcher.py` — Tool execution
+- `orion/core/message_manager.py` — Conversation context
 
 ## Rules
 1. **Always read SESSION_START.md before starting work**
@@ -27,4 +32,4 @@
 4. Update this file at session end
 
 ---
-*Last updated: M5.3 Browser Automation complete*
+*Last updated: Core modules upgrade (Hermes-inspired)*
