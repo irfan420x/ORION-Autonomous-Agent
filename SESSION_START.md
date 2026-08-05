@@ -1,27 +1,29 @@
 # 🚀 SESSION START 🚀
 
 ## Current Status
-- **Phase 1** — ✅ COMPLETE
-- **Phase 2** — ✅ COMPLETE (M2.1–M2.4)
-- **Next:** Phase 3 (Intelligence & LLM Management)
-- **Total Tests:** 287 passing | **Rust:** Compiled ✅
+- **Phase 1** — ✅ COMPLETE (220 tests)
+- **Phase 2** — ✅ COMPLETE (67 tests)
+- **Phase 3** — 🔄 25% (M3.1 done)
+- **Next:** M3.2 Planning Engine (DAG)
+- **Total:** 311 tests | **Rust:** Compiled ✅
 
-## Completed
-### Phase 1 ✅ (220 tests)
-- M1.1 EventBus | M1.2 State Machine | M1.3 Memory
-- M1.4 Runtime | M1.5 Self-Healing | M1.6 Observability
-
-### Phase 2 ✅ (67 tests)
-- M2.1 Hardware Detection ✅
-- M2.2 Dependency Engine (27) ✅
-- M2.3 World Model Graphs (34) ✅
-- M2.4 Rust Monitor + File Watcher (6) ✅
+## Phase 3 Progress
+- M3.1: LLM Client + Model Router ✅ (24 tests)
+  - Models: xiaomi/mimo-v2.5-pro, xiaomi/mimo-v2.5 via OpenRouter
+  - API key configured, multi-model support
+- M3.2: Planning Engine ⏳ NEXT
+- M3.3: Cost Manager ⏳
+- M3.4: Reasoning Engine ⏳
 
 ## Key Files
-- `orion-rs/` — Rust performance layer (process monitor, file watcher)
+- `orion/intelligence/llm_client.py` — LLM client (OpenAI-compatible)
+- `orion/intelligence/model_router.py` — Model router (task-based)
 - `orion/rust_bridge.py` — Python↔Rust bridge
-- `orion/world_model/` — Workspace, Process, Network graphs
-- `orion/dependency/dependency_engine.py` — Auto-install deps
+
+## Remember for Later
+- Beautiful structured logging
+- Comprehensive error handling
+- OS detection for auto-install
 
 ## Rules
 1. **Always read SESSION_START.md before starting work**
@@ -30,4 +32,4 @@
 4. Update this file at session end
 
 ---
-*Last updated: M2.4 Rust Monitor complete, Phase 2 done*
+*Last updated: M3.1 LLM Client + Model Router complete*
