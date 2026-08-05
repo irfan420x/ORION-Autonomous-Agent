@@ -393,17 +393,17 @@ NEVER say "I can create" when user says "delete". ALWAYS match the user's intent
     async def _tool_remember(self, key: str, value: str) -> str:
         """Store in memory."""
         if self.memory_manager:
-            await self.memory_manager.remember(key, value, memory_type="long_term")
+            from orion.contracts.memory_contracts import MemoryType
+            await self.memory_manager.remember(key, value, memory_type=MemoryType.LONG_TERM)
             return f"✅ Remembered: {key} = {value}"
         return "❌ Memory not available"
     
     async def _tool_recall(self, query: str) -> str:
         """Recall from memory."""
         if self.memory_manager:
-            results = await self.memory_manager.recall_all(query)
-            if results:
-                items = [f"• {r.get('key', '?')}: {r.get('value', '?')}" for r in results[:5]]
-                return f"🧠 **Recalled:**\n" + "\n".join(items)
+            result = await self.memory_manager.recall_all_tiers(query)
+            if result is not None:
+                return f"🧠 **Recalled:** {query} = {result}"
             return f"Nothing found for: {query}"
         return "❌ Memory not available"
     

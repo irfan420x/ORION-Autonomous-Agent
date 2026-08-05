@@ -5,26 +5,19 @@
 - **Phase 2** — ✅ COMPLETE (67 tests)
 - **Phase 3** — ✅ COMPLETE (74 tests)
 - **Phase 4** — ✅ COMPLETE (84 tests)
-- **Phase 5** — 🔄 50% (M5.1 done)
-- **Next:** M5.2 GUI Automation
-- **Total:** 475 tests | **Rust:** Compiled ✅ | **GUI:** PyQt6 ✅
+- **Phase 5** — 🔄 75% (M5.1, M5.2 done)
+- **Next:** M5.3 Browser Automation
+- **Total:** 493 tests | **Rust:** Compiled ✅ | **GUI:** PyQt6 ✅
 
 ## Phase 5 Progress
-- M5.1: OS Control + Dashboard + Desktop GUI ✅
-  - PyQt6 native desktop application
-  - Splash screen, Main window, Navigation, Dashboard
-  - Real-time system monitoring
-  - Launch: `python3 -m orion.gui`
-- M5.2: GUI Automation ⏳ NEXT
-- M5.3: Browser Automation ⏳
+- M5.1: OS Control + Desktop GUI ✅
+- M5.2: GUI Automation ✅ (18 tests)
+- M5.3: Browser Automation ⏳ NEXT
 - M5.4: Vision System ⏳
 
 ## Key Files
 - `orion/gui/__main__.py` — GUI entry point
-- `orion/gui/core/theme.py` — Theme engine
-- `orion/gui/core/signals.py` — Global signal bus
-- `orion/gui/windows/main_window.py` — Main window
-- `orion/gui/pages/dashboard_page.py` — Dashboard
+- `orion/gui_automation/automation.py` — GUI automation
 
 ## Rules
 1. **Always read SESSION_START.md before starting work**
@@ -33,4 +26,4 @@
 4. Update this file at session end
 
 ---
-*Last updated: M5.1 OS Control + Desktop GUI complete*
+*Last updated: M5.2 GUI Automation complete*
