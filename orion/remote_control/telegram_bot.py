@@ -235,6 +235,62 @@ NEVER say "I can create" when user says "delete". ALWAYS match the user's intent
     # Tool Execution (called by LLM)
     # ========================================================================
     
+    def _detect_action(self, message: str) -> Optional[tuple]:
+        """
+        Detect action keywords in message and return appropriate tool call.
+        Returns (tool_name, arguments) or None.
+        """
+        msg = message.lower().strip()
+        
+        # Delete patterns
+        delete_patterns = [
+            r'ডিলিট', r'delete', r'মুছে', r'মুছ', r'remove', r'rm ',
+            r'kas', r'কাস', r'বাদ দাও', r'ফেলে দাও',
+        ]
+        
+        # Create patterns
+        create_patterns = [
+            r'তৈরি', r'বানাও', r'create', r'make', r'লিখো', r'লেখো',
+            r'write', r'generate', r'তৈরি করো',
+        ]
+        
+        # List patterns
+        list_patterns = [
+            r'কী আছে', r'কি আছে', r'list', r'দেখাও', r'show',
+            r'কী কী', r'কি কি', r'বলো', r'dir\b',
+        ]
+        
+        # Extract filenames from message
+        import re
+        filenames = re.findall(r'[\w.-]+\.py', message)
+        
+        # Check for delete action
+        for pattern in delete_patterns:
+            if re.search(pattern, msg):
+                if filenames:
+                    # Build rm command for each file
+                    file_args = ' '.join([f'~/Desktop/{f}' for f in filenames])
+                    return ('run_shell_command', {'command': f'rm {file_args}'})
+                else:
+                    # Ask for filenames via LLM
+                    return None
+        
+        # Check for create action
+        for pattern in create_patterns:
+            if re.search(pattern, msg):
+                if filenames:
+                    return ('create_file', {'path': f'~/Desktop/{filenames[0]}', 'content': '# Created by ORION\n'})
+                return None
+        
+        # Check for list action
+        for pattern in list_patterns:
+            if re.search(pattern, msg):
+                if 'desktop' in msg or 'ডেস্কটপ' in msg:
+                    return ('run_shell_command', {'command': 'ls -la ~/Desktop/'})
+                return ('run_shell_command', {'command': 'ls -la ~/'})
+        
+        return None
+    
     async def _execute_tool(self, tool_name: str, arguments: Dict[str, Any]) -> str:
         """Execute a tool and return the result as string."""
         try:
@@ -1249,6 +1305,14 @@ NEVER say "I can create" when user says "delete". ALWAYS match the user's intent
                 choice = raw.get("choices", [{}])[0]
                 message = choice.get("message", {})
                 tool_calls = message.get("tool_calls", [])
+                
+                # If no tool calls but message contains action keywords, force tool call
+                if not tool_calls:
+                    action_tool = self._detect_action(message_text)
+                    if action_tool:
+                        tool_name, arguments = action_tool
+                        tool_calls = [{"function": {"name": tool_name, "arguments": json.dumps(arguments)}}]
+                        logger.info("Forced tool call: %s", tool_name)
                 
                 if tool_calls:
                     # Execute tools and get results
