@@ -38,8 +38,8 @@ class TestLLMClient:
 
     def test_get_model(self, client):
         config = client.get_model("mimo-v2.5-pro")
-        assert config.model_id == "xiaomi/mimo-v2.5-pro"
-        assert "openrouter" in config.base_url
+        assert config.model_id == "mimo-v2.5-pro"
+        assert "xiaomimimo" in config.base_url
 
     def test_get_model_unknown(self, client):
         with pytest.raises(ValueError, match="Unknown model"):
