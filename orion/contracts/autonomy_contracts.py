@@ -11,8 +11,8 @@ class WatcherConfig(BaseModel):
     watcher_id: str = Field(..., description="Unique identifier for the watcher")
     watch_type: Literal["filesystem", "process", "metric"] = Field(..., description="Type of event to watch")
     target: str = Field(..., description="Target to watch (e.g., file path, process name, metric name)")
-    trigger_condition: Dict[str, Any] = Field(..., description="Condition that triggers an action (e.g., {"event": "modified", "threshold": 0.8})")
-    action_to_trigger: Dict[str, Any] = Field(..., description="Action to perform when triggered (e.g., {"type": "execute_task", "task_id": "cleanup_logs"})")
+    trigger_condition: Dict[str, Any] = Field(..., description='Condition that triggers an action (e.g., {"event": "modified", "threshold": 0.8})')
+    action_to_trigger: Dict[str, Any] = Field(..., description='Action to perform when triggered (e.g., {"type": "execute_task", "task_id": "cleanup_logs"})')
     is_active: bool = Field(True, description="Whether the watcher is currently active")
 
 class WatcherEvent(BaseModel):

@@ -2,7 +2,7 @@
 ORION Telegram Bot Integration
 =============================
 
-Telegram bot that connects to ORION's EventBus, StateMachine, and TaskQueue.
+Telegram bot that connects to ORION's EventBus, StateMachine, TaskQueue, and MemoryManager.
 
 Usage:
     python -m orion.remote_control.telegram_bot
@@ -23,19 +23,17 @@ from telegram.ext import (
 )
 
 from orion.contracts.agent_contracts import Event, Task
+from orion.contracts.memory_contracts import MemoryType
 from orion.core.communication.event_bus import EventBus, get_event_bus
 from orion.core.state.state_machine import StateMachine, State
 from orion.core.state.task_queue import TaskQueueEngine
+from orion.memory.memory_manager import MemoryManager
 
 logger = logging.getLogger(__name__)
 
 
 class OrionTelegramBot:
-    """
-    Telegram bot integration for ORION.
-    
-    Connects Telegram messages to ORION's EventBus, StateMachine, and TaskQueue.
-    """
+    """Telegram bot integration for ORION."""
     
     def __init__(
         self,
@@ -44,22 +42,14 @@ class OrionTelegramBot:
         event_bus: Optional[EventBus] = None,
         state_machine: Optional[StateMachine] = None,
         task_queue: Optional[TaskQueueEngine] = None,
+        memory_manager: Optional[MemoryManager] = None,
     ):
-        """
-        Initialize the Telegram bot.
-        
-        Args:
-            token: Bot token from @BotFather
-            allowed_user_id: Telegram user ID allowed to interact
-            event_bus: Optional EventBus instance
-            state_machine: Optional StateMachine instance
-            task_queue: Optional TaskQueueEngine instance
-        """
         self.token = token
         self.allowed_user_id = allowed_user_id
         self.event_bus = event_bus or get_event_bus()
         self.state_machine = state_machine
         self.task_queue = task_queue
+        self.memory_manager = memory_manager
         self.app: Optional[Application] = None
         
         logger.info("OrionTelegramBot initialized for user %d", allowed_user_id)
@@ -69,66 +59,56 @@ class OrionTelegramBot:
     # ========================================================================
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /start command."""
         if not self._is_allowed(update):
             return
         
         await update.message.reply_text(
             "🤖 **ORION Autonomous Agent**\n\n"
-            "I am ORION, your AI assistant.\n\n"
-            "📋 **Available Commands:**\n"
+            "📋 **Commands:**\n"
             "/help - Show all commands\n"
             "/status - System status\n"
             "/ping - Test connection\n\n"
-            "🔄 **State Machine:**\n"
-            "/state - Current state\n"
-            "/transitions - Valid transitions\n"
-            "/setstate <state> - Change state\n\n"
-            "📝 **Task Queue:**\n"
-            "/tasks - List all tasks\n"
-            "/addtask <goal> - Add new task\n"
-            "/task <id> - Get task details\n"
-            "/completetask <id> - Mark task complete\n"
-            "/failedtask <id> - Mark task failed\n"
-            "/cleartasks - Clear completed tasks\n",
+            "🔄 **State:** /state, /setstate\n"
+            "📝 **Tasks:** /tasks, /addtask, /task\n"
+            "🧠 **Memory:** /memory, /remember, /recall\n"
+            "📡 **Events:** /events, /stats",
             parse_mode="Markdown"
         )
     
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /help command."""
         if not self._is_allowed(update):
             return
         
         await update.message.reply_text(
             "📋 **All Commands:**\n\n"
-            "**Basic:**\n"
-            "/start - Welcome message\n"
-            "/help - This help\n"
-            "/status - Full system status\n"
-            "/ping - Test connection\n\n"
+            "**Basic:** /start, /help, /status, /ping\n\n"
             "**State Machine:**\n"
             "/state - Current state\n"
             "/transitions - Valid transitions\n"
-            "/setstate <state> - Change state\n"
-            "  States: IDLE, PROCESSING, PAUSED, ERROR, SHUTDOWN\n\n"
+            "/setstate <state> - Change state\n\n"
             "**Task Queue:**\n"
-            "/tasks - List all tasks\n"
-            "/tasks pending - Pending tasks only\n"
-            "/tasks completed - Completed tasks only\n"
-            "/addtask <goal> - Add new task\n"
-            "/task <id> - Get task details\n"
-            "/completetask <id> - Mark task complete\n"
-            "/failedtask <id> - Mark task failed\n"
+            "/tasks - List tasks\n"
+            "/addtask <goal> - Add task\n"
+            "/task <id> - Task details\n"
+            "/completetask <id> - Mark complete\n"
+            "/failedtask <id> - Mark failed\n"
             "/removetask <id> - Remove task\n"
-            "/cleartasks - Clear completed tasks\n\n"
+            "/cleartasks - Clear completed\n\n"
+            "**Memory:**\n"
+            "/memory - Memory stats\n"
+            "/remember <key> <value> - Store\n"
+            "/recall <key> - Retrieve\n"
+            "/forget <key> - Delete\n"
+            "/searchmemory <query> - Search\n"
+            "/logexperience <action> <outcome> - Log\n"
+            "/lessons - Get lessons learned\n\n"
             "**EventBus:**\n"
             "/events - Recent events\n"
-            "/stats - System statistics\n",
+            "/stats - System statistics",
             parse_mode="Markdown"
         )
     
     async def ping_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /ping command."""
         if not self._is_allowed(update):
             return
         
@@ -138,57 +118,54 @@ class OrionTelegramBot:
         await msg.edit_text(f"🏓 Pong! ({elapsed:.0f}ms)")
     
     async def status_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /status command - full system status."""
         if not self._is_allowed(update):
             return
         
         lines = ["📊 **ORION System Status**\n"]
         
-        # State Machine status
         if self.state_machine:
             sm_stats = self.state_machine.get_stats()
             lines.append("🔄 **State Machine:**")
             lines.append(f"  • Current: `{sm_stats['current_state']}`")
             lines.append(f"  • Transitions: {sm_stats['total_transitions']}")
-            lines.append(f"  • Valid next: {', '.join(sm_stats['valid_transitions']) or 'None'}")
             lines.append("")
         
-        # Task Queue status
         if self.task_queue:
             tq_stats = self.task_queue.get_stats()
             lines.append("📝 **Task Queue:**")
             lines.append(f"  • Total: {tq_stats['total_tasks']}")
             for status, count in tq_stats.get('status_counts', {}).items():
                 lines.append(f"  • {status}: {count}")
-            lines.append(f"  • Completed (all time): {tq_stats['total_completed']}")
-            lines.append(f"  • Failed (all time): {tq_stats['total_failed']}")
             lines.append("")
         
-        # EventBus status
+        if self.memory_manager:
+            mem_stats = self.memory_manager.get_stats()
+            lines.append("🧠 **Memory:**")
+            lines.append(f"  • Session: {mem_stats['session']['total_entries']} entries")
+            lines.append(f"  • Long-term: {mem_stats['long_term']['total_entries']} entries")
+            lines.append(f"  • Episodes: {mem_stats['episodic']['total_episodes']}")
+            lines.append(f"  • Semantic: {mem_stats['semantic']['total_documents']} docs")
+            lines.append("")
+        
         eb_stats = self.event_bus.get_stats()
         lines.append("📡 **EventBus:**")
         lines.append(f"  • Published: {eb_stats['total_published']}")
         lines.append(f"  • Delivered: {eb_stats['total_delivered']}")
         lines.append(f"  • Errors: {eb_stats['total_errors']}")
-        lines.append(f"  • Subscriptions: {eb_stats['active_subscriptions']}")
         
         await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
     
     async def stats_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /stats command."""
         if not self._is_allowed(update):
             return
         
         eb_stats = self.event_bus.get_stats()
-        
         await update.message.reply_text(
             "📈 **EventBus Statistics:**\n\n"
-            f"• Total Published: {eb_stats['total_published']}\n"
-            f"• Total Delivered: {eb_stats['total_delivered']}\n"
-            f"• Total Errors: {eb_stats['total_errors']}\n"
-            f"• Active Subscriptions: {eb_stats['active_subscriptions']}\n"
-            f"• Unique Patterns: {eb_stats['unique_patterns']}\n"
-            f"• History Size: {eb_stats['history_size']}",
+            f"• Published: {eb_stats['total_published']}\n"
+            f"• Delivered: {eb_stats['total_delivered']}\n"
+            f"• Errors: {eb_stats['total_errors']}\n"
+            f"• Subscriptions: {eb_stats['active_subscriptions']}",
             parse_mode="Markdown"
         )
     
@@ -197,7 +174,6 @@ class OrionTelegramBot:
     # ========================================================================
     
     async def state_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /state command - show current state."""
         if not self._is_allowed(update):
             return
         
@@ -206,7 +182,6 @@ class OrionTelegramBot:
             return
         
         stats = self.state_machine.get_stats()
-        
         await update.message.reply_text(
             f"🔄 **Current State:** `{stats['current_state']}`\n\n"
             f"**Valid transitions:** {', '.join(f'`{s}`' for s in stats['valid_transitions']) or 'None'}\n"
@@ -215,7 +190,6 @@ class OrionTelegramBot:
         )
     
     async def transitions_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /transitions command - show valid transitions."""
         if not self._is_allowed(update):
             return
         
@@ -224,9 +198,6 @@ class OrionTelegramBot:
             return
         
         current = self.state_machine.current_state
-        valid = self.state_machine.get_valid_transitions()
-        
-        # Show all possible transitions
         all_transitions = StateMachine.VALID_TRANSITIONS
         
         lines = ["🔄 **State Transitions:**\n"]
@@ -238,7 +209,6 @@ class OrionTelegramBot:
         await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
     
     async def setstate_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /setstate command - change state."""
         if not self._is_allowed(update):
             return
         
@@ -249,8 +219,7 @@ class OrionTelegramBot:
         args = context.args
         if not args:
             await update.message.reply_text(
-                "Usage: `/setstate <state>`\n"
-                "States: IDLE, PROCESSING, PAUSED, ERROR, SHUTDOWN",
+                "Usage: `/setstate <state>`\nStates: IDLE, PROCESSING, PAUSED, ERROR, SHUTDOWN",
                 parse_mode="Markdown"
             )
             return
@@ -268,15 +237,14 @@ class OrionTelegramBot:
         
         if success:
             await update.message.reply_text(
-                f"✅ State changed to `{new_state.value}`\n"
-                f"Reason: {reason}",
+                f"✅ State changed to `{new_state.value}`\nReason: {reason}",
                 parse_mode="Markdown"
             )
         else:
             valid = self.state_machine.get_valid_transitions()
             await update.message.reply_text(
-                f"❌ Invalid transition: `{self.state_machine.current_state.value}` → `{new_state.value}`\n\n"
-                f"Valid transitions: {', '.join(f'`{s.value}`' for s in valid)}",
+                f"❌ Invalid transition: `{self.state_machine.current_state.value}` → `{new_state.value}`\n"
+                f"Valid: {', '.join(f'`{s.value}`' for s in valid)}",
                 parse_mode="Markdown"
             )
     
@@ -285,7 +253,6 @@ class OrionTelegramBot:
     # ========================================================================
     
     async def tasks_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /tasks command - list tasks."""
         if not self._is_allowed(update):
             return
         
@@ -306,15 +273,11 @@ class OrionTelegramBot:
             return
         
         lines = [f"📝 **Tasks ({len(tasks)}):**\n"]
-        for task in tasks[:20]:  # Limit to 20
+        for task in tasks[:20]:
             status_emoji = {
-                "PENDING": "⏳",
-                "IN_PROGRESS": "🔄",
-                "COMPLETED": "✅",
-                "FAILED": "❌",
-                "CANCELLED": "🚫",
+                "PENDING": "⏳", "IN_PROGRESS": "🔄", "COMPLETED": "✅",
+                "FAILED": "❌", "CANCELLED": "🚫",
             }.get(task.status, "❓")
-            
             lines.append(f"{status_emoji} `{task.task_id}` - {task.goal[:50]}")
         
         if len(tasks) > 20:
@@ -323,7 +286,6 @@ class OrionTelegramBot:
         await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
     
     async def addtask_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /addtask command - add a new task."""
         if not self._is_allowed(update):
             return
         
@@ -333,36 +295,25 @@ class OrionTelegramBot:
         
         args = context.args
         if not args:
-            await update.message.reply_text(
-                "Usage: `/addtask <goal>`\n"
-                "Example: `/addtask Research AI agents`",
-                parse_mode="Markdown"
-            )
+            await update.message.reply_text("Usage: `/addtask <goal>`", parse_mode="Markdown")
             return
         
         goal = " ".join(args)
         task_id = f"task_{int(time.time())}"
         
         task = Task(
-            task_id=task_id,
-            goal=goal,
-            status="PENDING",
-            dependencies=[],
-            created_at=time.time(),
-            updated_at=time.time(),
+            task_id=task_id, goal=goal, status="PENDING",
+            dependencies=[], created_at=time.time(), updated_at=time.time(),
         )
         
         await self.task_queue.add_task(task)
         
         await update.message.reply_text(
-            f"✅ Task added!\n\n"
-            f"**ID:** `{task_id}`\n"
-            f"**Goal:** {goal}",
+            f"✅ Task added!\n**ID:** `{task_id}`\n**Goal:** {goal}",
             parse_mode="Markdown"
         )
     
     async def task_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /task command - get task details."""
         if not self._is_allowed(update):
             return
         
@@ -375,11 +326,9 @@ class OrionTelegramBot:
             await update.message.reply_text("Usage: `/task <id>`", parse_mode="Markdown")
             return
         
-        task_id = args[0]
-        task = await self.task_queue.get_task(task_id)
-        
+        task = await self.task_queue.get_task(args[0])
         if not task:
-            await update.message.reply_text(f"❌ Task not found: `{task_id}`", parse_mode="Markdown")
+            await update.message.reply_text(f"❌ Task not found: `{args[0]}`", parse_mode="Markdown")
             return
         
         await update.message.reply_text(
@@ -388,14 +337,11 @@ class OrionTelegramBot:
             f"**Goal:** {task.goal}\n"
             f"**Status:** {task.status}\n"
             f"**Dependencies:** {', '.join(task.dependencies) or 'None'}\n"
-            f"**Assigned:** {task.assigned_agent or 'Unassigned'}\n"
-            f"**Created:** {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(task.created_at))}\n"
-            f"**Updated:** {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(task.updated_at))}",
+            f"**Created:** {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(task.created_at))}",
             parse_mode="Markdown"
         )
     
     async def completetask_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /completetask command."""
         if not self._is_allowed(update):
             return
         
@@ -408,16 +354,13 @@ class OrionTelegramBot:
             await update.message.reply_text("Usage: `/completetask <id>`", parse_mode="Markdown")
             return
         
-        task_id = args[0]
-        success = await self.task_queue.update_task_status(task_id, "COMPLETED", "Completed via Telegram")
-        
+        success = await self.task_queue.update_task_status(args[0], "COMPLETED", "Completed via Telegram")
         if success:
-            await update.message.reply_text(f"✅ Task `{task_id}` marked as completed!", parse_mode="Markdown")
+            await update.message.reply_text(f"✅ Task `{args[0]}` completed!", parse_mode="Markdown")
         else:
-            await update.message.reply_text(f"❌ Task not found: `{task_id}`", parse_mode="Markdown")
+            await update.message.reply_text(f"❌ Task not found: `{args[0]}`", parse_mode="Markdown")
     
     async def failedtask_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /failedtask command."""
         if not self._is_allowed(update):
             return
         
@@ -430,17 +373,14 @@ class OrionTelegramBot:
             await update.message.reply_text("Usage: `/failedtask <id>`", parse_mode="Markdown")
             return
         
-        task_id = args[0]
         reason = " ".join(args[1:]) if len(args) > 1 else "Failed via Telegram"
-        success = await self.task_queue.update_task_status(task_id, "FAILED", reason)
-        
+        success = await self.task_queue.update_task_status(args[0], "FAILED", reason)
         if success:
-            await update.message.reply_text(f"❌ Task `{task_id}` marked as failed", parse_mode="Markdown")
+            await update.message.reply_text(f"❌ Task `{args[0]}` marked as failed", parse_mode="Markdown")
         else:
-            await update.message.reply_text(f"❌ Task not found: `{task_id}`", parse_mode="Markdown")
+            await update.message.reply_text(f"❌ Task not found: `{args[0]}`", parse_mode="Markdown")
     
     async def removetask_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /removetask command."""
         if not self._is_allowed(update):
             return
         
@@ -453,16 +393,13 @@ class OrionTelegramBot:
             await update.message.reply_text("Usage: `/removetask <id>`", parse_mode="Markdown")
             return
         
-        task_id = args[0]
-        success = await self.task_queue.remove_task(task_id)
-        
+        success = await self.task_queue.remove_task(args[0])
         if success:
-            await update.message.reply_text(f"🗑️ Task `{task_id}` removed", parse_mode="Markdown")
+            await update.message.reply_text(f"🗑️ Task `{args[0]}` removed", parse_mode="Markdown")
         else:
-            await update.message.reply_text(f"❌ Task not found: `{task_id}`", parse_mode="Markdown")
+            await update.message.reply_text(f"❌ Task not found: `{args[0]}`", parse_mode="Markdown")
     
     async def cleartasks_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /cleartasks command."""
         if not self._is_allowed(update):
             return
         
@@ -474,11 +411,216 @@ class OrionTelegramBot:
         await update.message.reply_text(f"🗑️ Cleared {count} completed tasks", parse_mode="Markdown")
     
     # ========================================================================
+    # Memory Commands
+    # ========================================================================
+    
+    async def memory_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle /memory command - show memory statistics."""
+        if not self._is_allowed(update):
+            return
+        
+        if not self.memory_manager:
+            await update.message.reply_text("❌ Memory Manager not initialized")
+            return
+        
+        stats = self.memory_manager.get_stats()
+        
+        await update.message.reply_text(
+            "🧠 **Memory Statistics:**\n\n"
+            "**Session Memory (Fast):**\n"
+            f"  • Entries: {stats['session']['total_entries']}\n"
+            f"  • Size: {stats['session']['total_size_bytes']} bytes\n\n"
+            "**Long-term Memory (Persistent):**\n"
+            f"  • Entries: {stats['long_term']['total_entries']}\n"
+            f"  • Size: {stats['long_term']['total_size_bytes']} bytes\n\n"
+            "**Episodic Memory (Experiences):**\n"
+            f"  • Episodes: {stats['episodic']['total_episodes']}\n"
+            f"  • Success Rate: {stats['episodic']['success_rate']:.1%}\n\n"
+            "**Semantic Memory (Vectors):**\n"
+            f"  • Documents: {stats['semantic']['total_documents']}",
+            parse_mode="Markdown"
+        )
+    
+    async def remember_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle /remember command - store a memory."""
+        if not self._is_allowed(update):
+            return
+        
+        if not self.memory_manager:
+            await update.message.reply_text("❌ Memory Manager not initialized")
+            return
+        
+        args = context.args
+        if len(args) < 2:
+            await update.message.reply_text(
+                "Usage: `/remember <key> <value>`\n"
+                "Example: `/remember user_name Irfan`",
+                parse_mode="Markdown"
+            )
+            return
+        
+        key = args[0]
+        value = " ".join(args[1:])
+        
+        # Store in both session and long-term
+        await self.memory_manager.remember(key, value, MemoryType.SESSION)
+        await self.memory_manager.remember(key, value, MemoryType.LONG_TERM)
+        
+        await update.message.reply_text(
+            f"✅ Remembered!\n**Key:** `{key}`\n**Value:** {value}",
+            parse_mode="Markdown"
+        )
+    
+    async def recall_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle /recall command - retrieve a memory."""
+        if not self._is_allowed(update):
+            return
+        
+        if not self.memory_manager:
+            await update.message.reply_text("❌ Memory Manager not initialized")
+            return
+        
+        args = context.args
+        if not args:
+            await update.message.reply_text("Usage: `/recall <key>`", parse_mode="Markdown")
+            return
+        
+        key = args[0]
+        value = await self.memory_manager.recall_all_tiers(key)
+        
+        if value is not None:
+            await update.message.reply_text(
+                f"🧠 **Recalled:**\n**Key:** `{key}`\n**Value:** {value}",
+                parse_mode="Markdown"
+            )
+        else:
+            await update.message.reply_text(f"❌ No memory found for key: `{key}`", parse_mode="Markdown")
+    
+    async def forget_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle /forget command - delete a memory."""
+        if not self._is_allowed(update):
+            return
+        
+        if not self.memory_manager:
+            await update.message.reply_text("❌ Memory Manager not initialized")
+            return
+        
+        args = context.args
+        if not args:
+            await update.message.reply_text("Usage: `/forget <key>`", parse_mode="Markdown")
+            return
+        
+        key = args[0]
+        deleted = await self.memory_manager.forget(key)
+        
+        if deleted:
+            await update.message.reply_text(f"🗑️ Forgot: `{key}`", parse_mode="Markdown")
+        else:
+            await update.message.reply_text(f"❌ No memory found for key: `{key}`", parse_mode="Markdown")
+    
+    async def searchmemory_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle /searchmemory command - search across all memory tiers."""
+        if not self._is_allowed(update):
+            return
+        
+        if not self.memory_manager:
+            await update.message.reply_text("❌ Memory Manager not initialized")
+            return
+        
+        args = context.args
+        if not args:
+            await update.message.reply_text("Usage: `/searchmemory <query>`", parse_mode="Markdown")
+            return
+        
+        query = " ".join(args)
+        results = await self.memory_manager.search_all(query, limit=5)
+        
+        lines = [f"🔍 **Search Results for:** `{query}`\n"]
+        
+        if results['session']:
+            lines.append("**Session Memory:**")
+            for entry in results['session'][:3]:
+                lines.append(f"  • `{entry.key}`: {str(entry.value)[:50]}")
+        
+        if results['long_term']:
+            lines.append("\n**Long-term Memory:**")
+            for entry in results['long_term'][:3]:
+                lines.append(f"  • `{entry.key}`: {str(entry.value)[:50]}")
+        
+        if results['semantic']:
+            lines.append("\n**Semantic Memory:**")
+            for doc in results['semantic'][:3]:
+                lines.append(f"  • `{doc['doc_id']}`: {doc['content'][:50]}")
+        
+        if not any(results.values()):
+            lines.append("No results found.")
+        
+        await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+    
+    async def logexperience_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle /logexperience command - log an experience."""
+        if not self._is_allowed(update):
+            return
+        
+        if not self.memory_manager:
+            await update.message.reply_text("❌ Memory Manager not initialized")
+            return
+        
+        args = context.args
+        if len(args) < 2:
+            await update.message.reply_text(
+                "Usage: `/logexperience <action> <outcome> [success|fail]`\n"
+                "Example: `/logexperience 'Install numpy' 'Success' success`",
+                parse_mode="Markdown"
+            )
+            return
+        
+        action = args[0]
+        outcome = args[1]
+        success = len(args) < 3 or args[2].lower() in ['success', 'ok', 'true', 'yes']
+        
+        episode = await self.memory_manager.log_experience(
+            action=action,
+            context={"source": "telegram"},
+            outcome=outcome,
+            success=success,
+        )
+        
+        await update.message.reply_text(
+            f"📝 **Experience Logged:**\n"
+            f"**ID:** `{episode.episode_id[:8]}`\n"
+            f"**Action:** {action}\n"
+            f"**Outcome:** {outcome}\n"
+            f"**Success:** {'✅' if success else '❌'}",
+            parse_mode="Markdown"
+        )
+    
+    async def lessons_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle /lessons command - get lessons learned."""
+        if not self._is_allowed(update):
+            return
+        
+        if not self.memory_manager:
+            await update.message.reply_text("❌ Memory Manager not initialized")
+            return
+        
+        lessons = await self.memory_manager.learn_from_failures()
+        
+        if not lessons:
+            await update.message.reply_text("📚 No lessons learned yet.")
+            return
+        
+        lines = ["📚 **Lessons Learned:**\n"]
+        for i, lesson in enumerate(lessons[:10], 1):
+            lines.append(f"{i}. {lesson}")
+        
+        await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+    
+    # ========================================================================
     # EventBus Commands
     # ========================================================================
     
     async def events_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle /events command - show recent events."""
         if not self._is_allowed(update):
             return
         
@@ -501,7 +643,6 @@ class OrionTelegramBot:
     # ========================================================================
     
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle regular text messages."""
         if not self._is_allowed(update):
             return
         
@@ -510,7 +651,6 @@ class OrionTelegramBot:
         
         logger.info("Message from %s: %s", user.first_name, message_text[:50])
         
-        # Publish message to EventBus
         await self.event_bus.publish(Event(
             event_type="telegram.message",
             payload={
@@ -525,32 +665,24 @@ class OrionTelegramBot:
             source="telegram_bot",
         ))
         
-        # Simple echo response
         await update.message.reply_text(
-            f"📨 Received: _{message_text}_\n\n"
-            "Use /help to see available commands.",
+            f"📨 Received: _{message_text}_\n\nUse /help to see commands.",
             parse_mode="Markdown"
         )
     
     # ========================================================================
-    # Response Handler (for AI engine)
+    # Response Handler
     # ========================================================================
     
     async def handle_response(self, event: Event) -> None:
-        """Handle response events from ORION's AI engine."""
         if event.event_type == "telegram.response":
             chat_id = event.payload.get("chat_id")
             message = event.payload.get("message", "")
             
             if chat_id and message and self.app:
-                await self.app.bot.send_message(
-                    chat_id=chat_id,
-                    text=message,
-                    parse_mode="Markdown"
-                )
+                await self.app.bot.send_message(chat_id=chat_id, text=message, parse_mode="Markdown")
     
     def _is_allowed(self, update: Update) -> bool:
-        """Check if the user is allowed to interact."""
         user_id = update.effective_user.id
         if user_id != self.allowed_user_id:
             logger.warning("Unauthorized access attempt from user %d", user_id)
@@ -558,22 +690,18 @@ class OrionTelegramBot:
         return True
     
     async def post_init(self, application: Application) -> None:
-        """Called after application initialization."""
         await self.event_bus.subscribe("telegram.response", self.handle_response)
         logger.info("Telegram bot subscribed to 'telegram.response' events")
     
     async def post_shutdown(self, application: Application) -> None:
-        """Called before shutdown."""
         await self.event_bus.unsubscribe("telegram.response", self.handle_response)
-        
-        # Persist task queue
         if self.task_queue:
             await self.task_queue.stop()
-        
+        if self.memory_manager:
+            await self.memory_manager.stop()
         logger.info("Telegram bot shutdown complete")
     
     def run(self) -> None:
-        """Start the Telegram bot."""
         logger.info("Starting Telegram bot...")
         
         self.app = (
@@ -605,6 +733,15 @@ class OrionTelegramBot:
         self.app.add_handler(CommandHandler("removetask", self.removetask_command))
         self.app.add_handler(CommandHandler("cleartasks", self.cleartasks_command))
         
+        # Memory commands
+        self.app.add_handler(CommandHandler("memory", self.memory_command))
+        self.app.add_handler(CommandHandler("remember", self.remember_command))
+        self.app.add_handler(CommandHandler("recall", self.recall_command))
+        self.app.add_handler(CommandHandler("forget", self.forget_command))
+        self.app.add_handler(CommandHandler("searchmemory", self.searchmemory_command))
+        self.app.add_handler(CommandHandler("logexperience", self.logexperience_command))
+        self.app.add_handler(CommandHandler("lessons", self.lessons_command))
+        
         # EventBus commands
         self.app.add_handler(CommandHandler("events", self.events_command))
         
@@ -616,7 +753,6 @@ class OrionTelegramBot:
 
 
 def main():
-    """Main entry point."""
     import sys
     
     logging.basicConfig(
@@ -624,7 +760,6 @@ def main():
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
     
-    # Bot configuration
     BOT_TOKEN = "8969014252:AAFr0E3qEATdBY4TYb0fL8lhsTEClWdYoyo"
     ALLOWED_USER_ID = 7429947930
     
@@ -632,14 +767,15 @@ def main():
     event_bus = get_event_bus()
     state_machine = StateMachine(event_bus, initial_state=State.IDLE)
     task_queue = TaskQueueEngine(event_bus, state_file="state/task_queue.json")
+    memory_manager = MemoryManager(event_bus)
     
-    # Create bot with all components
     bot = OrionTelegramBot(
         token=BOT_TOKEN,
         allowed_user_id=ALLOWED_USER_ID,
         event_bus=event_bus,
         state_machine=state_machine,
         task_queue=task_queue,
+        memory_manager=memory_manager,
     )
     
     try:
