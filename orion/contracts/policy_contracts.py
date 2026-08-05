@@ -5,7 +5,7 @@ class ExecutionStrategy(BaseModel):
     strategy_id: str = Field(..., description="Unique identifier for the execution strategy")
     llm_model: str = Field(..., description="Recommended LLM model to use (e.g., 'claude-3-opus', 'ollama-llama3')")
     tool_selection_policy: Literal["strict", "flexible"] = Field("flexible", description="Policy for selecting tools")
-    resource_allocation: Dict[str, Any] = Field({}, description="Recommended resource allocation (e.g., {'cpu_limit': '80%', 'ram_limit_gb': 4})")
+    resource_allocation: Dict[str, Any] = Field(default_factory=dict, description="Recommended resource allocation (e.g., {'cpu_limit': '80%', 'ram_limit_gb': 4})")
     fallback_strategy: Optional[str] = Field(None, description="Fallback strategy if primary fails")
     reason: str = Field(..., description="Explanation for why this strategy was chosen")
 
@@ -19,5 +19,5 @@ class PolicyRule(BaseModel):
 class PolicyEvaluationResult(BaseModel):
     rule_id: str = Field(..., description="ID of the rule that was evaluated")
     matched: bool = Field(..., description="True if the rule's condition was met")
-    applied_actions: List[Dict[str, Any]] = Field([], description="List of actions applied by this rule")
+    applied_actions: List[Dict[str, Any]] = Field(default_factory=list, description="List of actions applied by this rule")
     reason: Optional[str] = Field(None, description="Reason for the evaluation result")

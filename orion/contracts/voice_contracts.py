@@ -26,4 +26,4 @@ class WakeWordDetection(BaseModel):
 class VoiceCommand(BaseModel):
     command_text: str = Field(..., description="Transcribed command text")
     intent: Optional[str] = Field(None, description="Detected intent of the command")
-    entities: Dict[str, Any] = Field({}, description="Extracted entities from the command")
+    entities: Dict[str, Any] = Field(default_factory=dict, description="Extracted entities from the command")

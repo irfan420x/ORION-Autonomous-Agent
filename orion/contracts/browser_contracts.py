@@ -18,7 +18,7 @@ class ElementInfo(BaseModel):
     selector: str = Field(..., description="CSS selector or XPath used to locate the element")
     text_content: Optional[str] = Field(None, description="Text content of the element")
     tag_name: Optional[str] = Field(None, description="HTML tag name of the element")
-    attributes: Dict[str, str] = Field({}, description="Key-value pairs of element attributes")
+    attributes: Dict[str, str] = Field(default_factory=dict, description="Key-value pairs of element attributes")
     bounding_box: Optional[Dict[str, float]] = Field(None, description="x, y, width, height of the element on screen")
 
 class WebAction(BaseModel):

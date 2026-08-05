@@ -18,10 +18,10 @@ class DetectedUIElement(BaseModel):
     text: Optional[str] = Field(None, description="Text content of the UI element")
     bounding_box: BoundingBox = Field(..., description="Bounding box of the UI element")
     confidence: float = Field(..., description="Confidence score of the detection")
-    metadata: Dict[str, Any] = Field({}, description="Additional metadata about the element")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata about the element")
 
 class VisionAnalysisResult(BaseModel):
     description: str = Field(..., description="Natural language description of the image content")
-    detected_objects: List[DetectedUIElement] = Field([], description="List of detected UI elements or objects")
-    ocr_results: List[OCRResult] = Field([], description="List of OCR results from the image")
+    detected_objects: List[DetectedUIElement] = Field(default_factory=list, description="List of detected UI elements or objects")
+    ocr_results: List[OCRResult] = Field(default_factory=list, description="List of OCR results from the image")
     raw_llm_response: Optional[Dict[str, Any]] = Field(None, description="Raw response from the Vision LLM")

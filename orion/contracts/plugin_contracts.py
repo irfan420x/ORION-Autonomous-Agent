@@ -8,9 +8,9 @@ class PluginManifest(BaseModel):
     author: str = Field(..., description="Author of the plugin")
     description: str = Field(..., description="Detailed description of what the plugin does")
     entry_point: str = Field(..., description="Path to the main file or function to execute when activating the plugin")
-    required_capabilities: List[str] = Field([], description="List of ORION capabilities required by this plugin")
-    dependencies: List[str] = Field([], description="List of external dependencies (e.g., Python packages, system binaries) required by this plugin")
-    permissions_requested: List[str] = Field([], description="List of specific permissions this plugin requests (e.g., 'filesystem.read', 'network.access')")
+    required_capabilities: List[str] = Field(default_factory=list, description="List of ORION capabilities required by this plugin")
+    dependencies: List[str] = Field(default_factory=list, description="List of external dependencies (e.g., Python packages, system binaries) required by this plugin")
+    permissions_requested: List[str] = Field(default_factory=list, description="List of specific permissions this plugin requests (e.g., 'filesystem.read', 'network.access')")
     config_schema: Optional[Dict[str, Any]] = Field(None, description="JSON schema for plugin-specific configuration")
 
 class PluginStatus(BaseModel):

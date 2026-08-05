@@ -7,11 +7,11 @@ Read this file immediately when a new coding session begins. Do not write any co
 
 ## 📍 Current Status
 - **Target Phase:** Phase 1 (Core Foundation)
-- **Target Milestone:** M1.3 (4-Tier Memory Architecture)
-- **Previous Milestone:** M1.2 (State Machine & Task Queue) ✅ COMPLETE
-- **Overall Completion:** 20%
+- **Target Milestone:** M1.4 (Adaptive Runtime)
+- **Previous Milestone:** M1.3 (4-Tier Memory Architecture) ✅ COMPLETE
+- **Overall Completion:** 30%
 
-## ✅ What Was Completed (M1.1 & M1.2)
+## ✅ What Was Completed (M1.1, M1.2 & M1.3)
 
 ### M1.1: Event Bus & Registry ✅
 - **EventBus** (`orion/core/communication/event_bus.py`)
@@ -38,32 +38,45 @@ Read this file immediately when a new coding session begins. Do not write any co
   - JSON file persistence (crash recovery)
   - Event publishing on task state changes
 
+### M1.3: 4-Tier Memory Architecture ✅
+- **SessionMemory** (`orion/memory/session_memory.py`) — LRU eviction, TTL, tags
+- **LongTermMemory** (`orion/memory/long_term_memory.py`) — SQLite + FTS5 search
+- **EpisodicMemory** (`orion/memory/episodic_memory.py`) — Experience logging, pattern recognition
+- **SemanticMemory** (`orion/memory/semantic_memory.py`) — Vector search, mock embeddings
+- **MemoryManager** (`orion/memory/memory_manager.py`) — Unified interface
+
 ### Telegram Bot ✅
 - **Full control via Telegram** (`orion/remote_control/telegram_bot.py`)
   - State Machine commands: `/state`, `/transitions`, `/setstate`
   - Task Queue commands: `/tasks`, `/addtask`, `/completetask`, `/failedtask`
   - EventBus commands: `/events`, `/stats`
+  - Memory commands: `/memory`, `/remember`, `/recall`, `/forget`, `/searchmemory`
   - System commands: `/status`, `/ping`, `/help`
 
 ### Tests ✅
-- 51 unit tests (all passing)
+- 84 unit tests (all passing)
 - Performance: 1000 msgs/sec throughput
 - Crash recovery verified
+
+## 🔧 Known Issues (Fixed 2026-08-05)
+- ✅ Mutable defaults (`Field([])` / `Field({})`) fixed in 21 contract files → now uses `default_factory`
+- ✅ Demo files fixed: PYTHONPATH, correct API usage, enum states
+- ✅ Context Engine & World Model demos marked as "requires future implementation"
+- ⚠️ `pyproject.toml` says `>=3.11` but code uses Python 3.13+ features — align before release
 
 ## 🛠️ Instructions for Today's Session:
 1. Review `BUILD_GUIDE.md` to remind yourself of the engineering rules.
 2. Check `PROGRESS_TRACKER.md` to see what was completed.
-3. Your immediate goal is to create the 4-Tier Memory Architecture.
-4. Implement `orion/memory/session_memory.py` (In-memory dict)
-5. Implement `orion/memory/long_term_memory.py` (SQLite wrapper)
-6. Implement `orion/memory/semantic_memory.py` (ChromaDB/Qdrant wrapper mock)
-7. Write the corresponding tests in `tests/memory/`.
-8. Run the tests. If they pass, run `./scripts/stability_check.sh`.
-9. **IMPORTANT:** Update Telegram bot with memory commands after implementation.
+3. Your immediate goal is to create the **Adaptive Runtime Core**.
+4. Implement `orion/core/runtime/runtime.py` (Resource detection, dynamic module loading)
+5. Implement resource monitoring (CPU, RAM, disk)
+6. Write the corresponding tests in `tests/runtime/`.
+7. Run the tests. If they pass, run `./scripts/stability_check.sh`.
+8. **IMPORTANT:** Update Telegram bot with runtime commands after implementation.
 
 ## 🛑 Constraints & Reminders:
-- **DO NOT** try to build the LLM Router or Vision system today. Stick to Memory Architecture.
-- **DO NOT** use external databases yet (except SQLite for long-term memory).
+- **DO NOT** try to build the LLM Router or Vision system today. Stick to Adaptive Runtime.
+- **DO NOT** use external databases yet.
 - Ensure all code is typed (`typing` module) and documented (docstrings).
 - The EventBus and StateMachine are ready — use them for all inter-module communication.
 - Update Telegram bot with new commands for each feature you build.

@@ -1,51 +1,79 @@
-import asyncio
-import time
+"""
+Memory Subsystem Demo
+=====================
+Demonstrates ORION's 4-Tier Memory Architecture.
+"""
+import sys
 import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import asyncio
 from orion.memory.session_memory import SessionMemory
 from orion.memory.long_term_memory import LongTermMemory
 from orion.memory.semantic_memory import SemanticMemory
-from orion.contracts.memory_contracts import MemoryItem, Document, SearchResult
+from orion.core.communication.event_bus import EventBus
 
 async def main():
     print("--- Memory Subsystem Demo Start ---")
 
-    # 1. Session Memory
-    session_mem = SessionMemory()
-    await session_mem.store("user_name", "Alice")
-    await session_mem.store("current_task", "Analyze sales report")
-    print(f"Session Memory: user_name = {await session_mem.retrieve("user_name")}")
-    print(f"Session Memory: current_task = {await session_mem.retrieve("current_task")}")
+    # EventBus is required by all memory modules
+    event_bus = EventBus()
 
-    # 2. Long-Term Memory (SQLite)
-    db_path = "state/long_term_memory.db"
+    # 1. Session Memory (in-memory, fast)
+    session_mem = SessionMemory(event_bus)
+    await session_mem.put("user_name", "Alice")
+    await session_mem.put("current_task", "Analyze sales report")
+    print(f"Session Memory: user_name = {await session_mem.get('user_name')}")
+    print(f"Session Memory: current_task = {await session_mem.get('current_task')}")
+
+    # 2. Long-Term Memory (SQLite-backed)
+    db_path = "state/demo_memory.db"
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    long_term_mem = LongTermMemory(db_path)
-    await long_term_mem.store("favorite_color", "blue", metadata={"source": "user_pref"})
-    await long_term_mem.store("project_deadline", "2026-12-31", metadata={"source": "project_plan"})
-    print(f"Long-Term Memory: favorite_color = {await long_term_mem.retrieve("favorite_color")}")
-    print(f"Long-Term Memory: project_deadline = {await long_term_mem.retrieve("project_deadline")}")
+    long_term_mem = LongTermMemory(event_bus, db_path)
+    await long_term_mem.start()
+    await long_term_mem.put("favorite_color", "blue", tags=["user_pref"])
+    await long_term_mem.put("project_deadline", "2026-12-31", tags=["project"])
+    print(f"Long-Term Memory: favorite_color = {await long_term_mem.get('favorite_color')}")
+    print(f"Long-Term Memory: project_deadline = {await long_term_mem.get('project_deadline')}")
 
-    # 3. Semantic Memory (Mock for now)
-    semantic_mem = SemanticMemory()
-    doc1 = Document(doc_id="doc1", content="ORION is an autonomous OS agent.", metadata={"type": "architecture"})
-    doc2 = Document(doc_id="doc2", content="The Event Bus uses asyncio queues.", metadata={"type": "communication"})
-    doc3 = Document(doc_id="doc3", content="Python is used for AI engine.", metadata={"type": "tech_stack"})
+    # Search in long-term memory
+    results = await long_term_mem.search("color")
+    print(f"Long-Term search 'color': {len(results)} results")
 
-    await semantic_mem.add_document(doc1.doc_id, doc1.content, doc1.metadata)
-    await semantic_mem.add_document(doc2.doc_id, doc2.content, doc2.metadata)
-    await semantic_mem.add_document(doc3.doc_id, doc3.content, doc3.metadata)
+    # 3. Semantic Memory (vector search with mock embeddings)
+    semantic_mem = SemanticMemory(event_bus)
+    await semantic_mem.add_document("doc1", "ORION is an autonomous OS agent.", metadata={"type": "architecture"})
+    await semantic_mem.add_document("doc2", "The Event Bus uses asyncio queues.", metadata={"type": "communication"})
+    await semantic_mem.add_document("doc3", "Python is used for AI engine.", metadata={"type": "tech_stack"})
 
     print("\nSemantic Memory Search for 'OS agent':")
-    results = await semantic_mem.search("OS agent", top_k=1)
+    results = await semantic_mem.search("OS agent", top_k=2)
     for res in results:
-        print(f"  Doc ID: {res.doc_id}, Content: {res.content}, Score: {res.score}")
+        print(f"  Doc: {res['doc_id']}, Score: {res.get('score', 'N/A'):.3f}")
 
-    print("--- Memory Subsystem Demo End ---")
+    # Stats
+    print("\n--- Session Memory Stats ---")
+    for k, v in session_mem.get_stats().model_dump().items():
+        print(f"  {k}: {v}")
+
+    print("\n--- Long-Term Memory Stats ---")
+    for k, v in long_term_mem.get_stats().model_dump().items():
+        print(f"  {k}: {v}")
+
+    print("\n--- Semantic Memory Stats ---")
+    for k, v in semantic_mem.get_stats().items():
+        print(f"  {k}: {v}")
+
+    # Cleanup demo DB
+    await long_term_mem.stop()
+    if os.path.exists(db_path):
+        os.remove(db_path)
+    if os.path.exists(db_path + "-wal"):
+        os.remove(db_path + "-wal")
+    if os.path.exists(db_path + "-shm"):
+        os.remove(db_path + "-shm")
+
+    print("\n--- Memory Subsystem Demo End ---")
 
 if __name__ == "__main__":
-    # This will fail until memory modules are implemented
-    try:
-        asyncio.run(main())
-    except NotImplementedError as e:
-        print(f"\nERROR: {e}. Please implement memory module methods first.")
-
+    asyncio.run(main())

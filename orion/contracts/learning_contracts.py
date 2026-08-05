@@ -5,7 +5,7 @@ class FailureReport(BaseModel):
     task_id: str = Field(..., description="ID of the task that failed")
     error_type: str = Field(..., description="Type of error encountered")
     error_message: str = Field(..., description="Detailed error message")
-    context: Dict[str, Any] = Field({}, description="Contextual information at the time of failure")
+    context: Dict[str, Any] = Field(default_factory=dict, description="Contextual information at the time of failure")
     recovery_attempted: bool = Field(False, description="True if recovery was attempted")
     recovery_successful: bool = Field(False, description="True if recovery was successful")
     timestamp: float = Field(..., description="Unix timestamp of the failure")

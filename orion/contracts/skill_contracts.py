@@ -18,14 +18,14 @@ class SkillDefinition(BaseModel):
     description: str = Field(..., description="Detailed description of what the skill does")
     version: str = Field("1.0", description="Version of the skill")
     author: str = Field(..., description="Author of the skill")
-    required_capabilities: List[str] = Field([], description="List of agent capabilities required to execute this skill")
-    input_schema: List[SkillInput] = Field([], description="Schema defining the required inputs for the skill")
-    output_schema: List[SkillOutput] = Field([], description="Schema defining the outputs produced by the skill")
+    required_capabilities: List[str] = Field(default_factory=list, description="List of agent capabilities required to execute this skill")
+    input_schema: List[SkillInput] = Field(default_factory=list, description="Schema defining the required inputs for the skill")
+    output_schema: List[SkillOutput] = Field(default_factory=list, description="Schema defining the outputs produced by the skill")
     underlying_workflow: Dict[str, Any] = Field(..., description="The Task DAG or reference to a workflow definition for this skill")
 
 class SkillExecutionRequest(BaseModel):
     skill_id: str = Field(..., description="ID of the skill to execute")
-    inputs: Dict[str, Any] = Field({}, description="Input parameters for the skill")
+    inputs: Dict[str, Any] = Field(default_factory=dict, description="Input parameters for the skill")
 
 class SkillExecutionResult(BaseModel):
     skill_id: str = Field(..., description="ID of the executed skill")

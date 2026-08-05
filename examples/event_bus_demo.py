@@ -1,3 +1,12 @@
+"""
+Event Bus Demo
+==============
+Demonstrates ORION's EventBus pub/sub with agent registration.
+"""
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import asyncio
 import time
 from orion.core.communication.event_bus import EventBus
@@ -17,7 +26,6 @@ class MockAgent:
             health_status="HEALTHY",
             endpoint=f"http://localhost:8000/{self.agent_id}"
         )
-        # In a real scenario, AgentRegistry would handle this, but for demo, we mock it.
         print(f"[{self.agent_id}] Registering with capabilities: {[c.name for c in self.capabilities]}")
 
     async def handle_event(self, event: Event):
@@ -72,7 +80,7 @@ async def main():
     # Agents subscribe to events
     await event_bus.subscribe("task.new", agent_a.handle_event)
     await event_bus.subscribe("task.new", agent_b.handle_event)
-    await event_bus.subscribe("agent.heartbeat", agent_c.handle_event) # AgentC monitors heartbeats
+    await event_bus.subscribe("agent.heartbeat", agent_c.handle_event)
 
     # Agent A sends a heartbeat
     await agent_a.send_heartbeat()
@@ -86,7 +94,6 @@ async def main():
     )
     await event_bus.publish(new_task_event)
 
-    # Give some time for async tasks to process
     await asyncio.sleep(0.1)
 
     print("\n--- Registered Agents (Mock) ---")
@@ -105,12 +112,12 @@ async def main():
     for event in agent_c.received_events:
         print(f"  {event.event_type} from {event.source}")
 
-    print("--- Event Bus Demo End ---")
+    print("\n--- EventBus Stats ---")
+    stats = event_bus.get_stats()
+    for k, v in stats.items():
+        print(f"  {k}: {v}")
+
+    print("\n--- Event Bus Demo End ---")
 
 if __name__ == "__main__":
-    # This will fail until EventBus.publish and subscribe are implemented
-    try:
-        asyncio.run(main())
-    except NotImplementedError as e:
-        print(f"\nERROR: {e}. Please implement EventBus.publish and EventBus.subscribe first.")
-
+    asyncio.run(main())

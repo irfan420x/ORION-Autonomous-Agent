@@ -7,7 +7,7 @@ class Metric(BaseModel):
     name: str = Field(..., description="Name of the metric (e.g., cpu_usage_percent, llm_tokens_used)")
     value: float = Field(..., description="Value of the metric")
     timestamp: float = Field(..., description="Unix timestamp of when the metric was recorded")
-    tags: Dict[str, str] = Field({}, description="Key-value pairs for metric categorization")
+    tags: Dict[str, str] = Field(default_factory=dict, description="Key-value pairs for metric categorization")
 
 class Span(BaseModel):
     span_id: str = Field(..., description="Unique identifier for the span")
@@ -16,7 +16,7 @@ class Span(BaseModel):
     start_time: float = Field(..., description="Unix timestamp of span start")
     end_time: Optional[float] = Field(None, description="Unix timestamp of span end")
     parent_span_id: Optional[str] = Field(None, description="ID of the parent span")
-    attributes: Dict[str, Any] = Field({}, description="Key-value pairs of span attributes")
+    attributes: Dict[str, Any] = Field(default_factory=dict, description="Key-value pairs of span attributes")
 
 class SpanStatus(BaseModel):
     status_code: Literal["UNSET", "OK", "ERROR"] = Field(..., description="Status code of the span")
@@ -26,7 +26,7 @@ class LogEntry(BaseModel):
     timestamp: float = Field(..., description="Unix timestamp of the log entry")
     level: LogLevel = Field(..., description="Log level")
     message: str = Field(..., description="Log message")
-    context: Dict[str, Any] = Field({}, description="Structured context for the log entry")
+    context: Dict[str, Any] = Field(default_factory=dict, description="Structured context for the log entry")
     component: str = Field(..., description="Component that generated the log")
 
 class CostEvent(BaseModel):
@@ -34,4 +34,4 @@ class CostEvent(BaseModel):
     timestamp: float = Field(..., description="Unix timestamp of the event")
     source: str = Field(..., description="Source of the cost (e.g., LLM API, cloud service)")
     cost_usd: float = Field(..., description="Cost incurred by the event in USD")
-    details: Dict[str, Any] = Field({}, description="Detailed information about the cost event")
+    details: Dict[str, Any] = Field(default_factory=dict, description="Detailed information about the cost event")

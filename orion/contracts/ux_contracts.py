@@ -9,7 +9,7 @@ class Notification(BaseModel):
     message: str = Field(..., description="Content of the notification")
     type: NotificationType = Field("info", description="Type of notification")
     timestamp: float = Field(..., description="Unix timestamp of when the notification was created")
-    actions: List[Dict[str, Any]] = Field([], description="List of actionable buttons or links in the notification")
+    actions: List[Dict[str, Any]] = Field(default_factory=list, description="List of actionable buttons or links in the notification")
 
 class ConfirmationRequest(BaseModel):
     request_id: str = Field(..., description="Unique identifier for the confirmation request")

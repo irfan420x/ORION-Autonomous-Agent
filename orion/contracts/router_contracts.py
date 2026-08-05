@@ -5,7 +5,7 @@ class ModelInfo(BaseModel):
     model_id: str = Field(..., description="Unique identifier for the model")
     provider: str = Field(..., description="Provider of the model (e.g., 'openai', 'anthropic', 'ollama')")
     type: Literal["llm", "embedding", "vision", "tts"] = Field(..., description="Type of the model")
-    capabilities: List[str] = Field([], description="List of capabilities (e.g., 'code_generation', 'multimodal')")
+    capabilities: List[str] = Field(default_factory=list, description="List of capabilities (e.g., 'code_generation', 'multimodal')")
     cost_per_token_input: float = Field(0.0, description="Cost per input token in USD")
     cost_per_token_output: float = Field(0.0, description="Cost per output token in USD")
     max_tokens: int = Field(..., description="Maximum context window size in tokens")

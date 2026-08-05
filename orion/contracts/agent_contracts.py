@@ -40,7 +40,7 @@ class Task(BaseModel):
     task_id: TaskID = Field(..., description="Unique identifier for the task")
     goal: str = Field(..., description="High-level goal of the task")
     status: TaskStatus = Field("PENDING", description="Current status of the task")
-    dependencies: List[TaskID] = Field([], description="List of task IDs this task depends on")
+    dependencies: List[TaskID] = Field(default_factory=list, description="List of task IDs this task depends on")
     assigned_agent: Optional[AgentID] = Field(None, description="Agent currently assigned to this task")
     created_at: float = Field(..., description="Unix timestamp of task creation")
     updated_at: float = Field(..., description="Unix timestamp of last update")

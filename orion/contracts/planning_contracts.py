@@ -6,12 +6,12 @@ class StructuredGoal(BaseModel):
     goal_id: str = Field(..., description="Unique identifier for the structured goal")
     description: str = Field(..., description="Detailed description of the goal")
     priority: int = Field(5, description="Priority level of the goal (1-10, 10 being highest)")
-    constraints: List[str] = Field([], description="List of constraints for achieving the goal")
-    success_criteria: List[str] = Field([], description="Criteria for determining goal success")
+    constraints: List[str] = Field(default_factory=list, description="List of constraints for achieving the goal")
+    success_criteria: List[str] = Field(default_factory=list, description="Criteria for determining goal success")
 
 class TaskGraphNode(BaseModel):
     task: Task = Field(..., description="The task represented by this node")
-    dependencies: List[TaskID] = Field([], description="List of TaskIDs that must be completed before this task")
+    dependencies: List[TaskID] = Field(default_factory=list, description="List of TaskIDs that must be completed before this task")
 
 class TaskGraph(BaseModel):
     graph_id: str = Field(..., description="Unique identifier for the task graph")

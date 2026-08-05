@@ -15,14 +15,14 @@ class ToolDefinition(BaseModel):
     version: str = Field("1.0", description="Version of the tool")
     type: Literal["cli", "python_function", "api"] = Field(..., description="Type of the tool")
     command: Optional[str] = Field(None, description="CLI command or Python function path")
-    args_schema: List[ToolArgument] = Field([], description="Schema defining the arguments for the tool")
-    capabilities: List[str] = Field([], description="List of capabilities this tool provides (e.g., 'filesystem.read', 'network.scan')")
-    permissions_required: List[str] = Field([], description="List of specific permissions this tool requires")
+    args_schema: List[ToolArgument] = Field(default_factory=list, description="Schema defining the arguments for the tool")
+    capabilities: List[str] = Field(default_factory=list, description="List of capabilities this tool provides (e.g., 'filesystem.read', 'network.scan')")
+    permissions_required: List[str] = Field(default_factory=list, description="List of specific permissions this tool requires")
     health_check_command: Optional[str] = Field(None, description="Command to check if the tool is installed and working")
 
 class ToolExecutionRequest(BaseModel):
     tool_id: str = Field(..., description="ID of the tool to execute")
-    args: Dict[str, Any] = Field({}, description="Arguments for the tool execution")
+    args: Dict[str, Any] = Field(default_factory=dict, description="Arguments for the tool execution")
 
 class ToolExecutionResult(BaseModel):
     tool_id: str = Field(..., description="ID of the executed tool")

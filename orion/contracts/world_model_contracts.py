@@ -29,7 +29,7 @@ class GitStatus(BaseModel):
     is_dirty: bool = Field(..., description="True if there are uncommitted changes")
     current_branch: str = Field(..., description="Name of the current branch")
     last_commit_msg: Optional[str] = Field(None, description="Message of the last commit")
-    untracked_files: List[str] = Field([], description="List of untracked files")
+    untracked_files: List[str] = Field(default_factory=list, description="List of untracked files")
 
 class WindowInfo(BaseModel):
     window_id: str = Field(..., description="Platform-specific window identifier")
@@ -41,4 +41,4 @@ class WindowInfo(BaseModel):
 class WorldModelGraph(BaseModel):
     graph_type: str = Field(..., description="Type of the graph (e.g., 'filesystem', 'process')")
     nodes: List[Dict[str, Any]] = Field(..., description="List of nodes in the graph")
-    edges: List[Dict[str, Any]] = Field([], description="List of edges in the graph")
+    edges: List[Dict[str, Any]] = Field(default_factory=list, description="List of edges in the graph")

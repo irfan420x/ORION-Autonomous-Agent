@@ -19,7 +19,7 @@ class WatcherEvent(BaseModel):
     watcher_id: str = Field(..., description="ID of the watcher that triggered the event")
     event_type: str = Field(..., description="Type of event detected (e.g., file.modified, process.stopped, metric.threshold_exceeded)")
     timestamp: float = Field(..., description="Unix timestamp of the event")
-    details: Dict[str, Any] = Field({}, description="Detailed information about the event")
+    details: Dict[str, Any] = Field(default_factory=dict, description="Detailed information about the event")
 
 class Report(BaseModel):
     report_id: str = Field(..., description="Unique identifier for the report")
@@ -27,4 +27,4 @@ class Report(BaseModel):
     period: Optional[str] = Field(None, description="Time period covered by the report (e.g., 'daily', 'weekly')")
     generated_at: float = Field(..., description="Unix timestamp of report generation")
     content: str = Field(..., description="Content of the report (e.g., Markdown, JSON)")
-    attachments: List[str] = Field([], description="List of file paths to attachments")
+    attachments: List[str] = Field(default_factory=list, description="List of file paths to attachments")

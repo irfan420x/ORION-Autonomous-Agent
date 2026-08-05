@@ -17,23 +17,23 @@ class TelegramResponse(BaseModel):
 class APIRequest(BaseModel):
     method: str = Field(..., description="HTTP method (e.g., GET, POST).")
     path: str = Field(..., description="Request path.")
-    headers: Dict[str, str] = Field({}, description="Request headers.")
+    headers: Dict[str, str] = Field(default_factory=dict, description="Request headers.")
     body: Optional[Dict[str, Any]] = Field(None, description="Request body.")
     auth_token: Optional[str] = Field(None, description="Authentication token.")
 
 class APIResponse(BaseModel):
     status_code: int = Field(..., description="HTTP status code.")
-    headers: Dict[str, str] = Field({}, description="Response headers.")
+    headers: Dict[str, str] = Field(default_factory=dict, description="Response headers.")
     body: Optional[Dict[str, Any]] = Field(None, description="Response body.")
 
 class RemoteCommand(BaseModel):
     command_id: str = Field(..., description="Unique identifier for the remote command.")
     command_type: str = Field(..., description="Type of command (e.g., 'execute_task', 'get_status').")
-    payload: Dict[str, Any] = Field({}, description="Command-specific payload.")
+    payload: Dict[str, Any] = Field(default_factory=dict, description="Command-specific payload.")
     source: Literal["telegram", "api", "websocket"] = Field(..., description="Source of the command.")
     user_id: Optional[str] = Field(None, description="User ID who issued the command.")
 
 class WebSocketMessage(BaseModel):
     message_type: str = Field(..., description="Type of WebSocket message (e.g., 'event', 'command', 'status').")
-    payload: Dict[str, Any] = Field({}, description="Message payload.")
+    payload: Dict[str, Any] = Field(default_factory=dict, description="Message payload.")
     timestamp: float = Field(..., description="Unix timestamp of the message.")
