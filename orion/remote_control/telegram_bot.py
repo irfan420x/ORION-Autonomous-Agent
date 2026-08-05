@@ -11,6 +11,7 @@ Usage:
 import asyncio
 import json
 import logging
+import os
 import time
 from typing import Any, Dict, List, Optional
 
@@ -94,6 +95,9 @@ IMPORTANT RULES:
 - ALWAYS use tools when the user asks for system information or actions
 - When user asks to CREATE a file, use the create_file tool immediately - do NOT just show code
 - When user asks to RUN a command, use run_shell_command tool
+- When working with files, always use FULL PATHS (e.g., ~/Desktop/file.py or /home/irfan/Desktop/file.py)
+- The home directory is /home/irfan
+- Desktop is at ~/Desktop/
 - Don't make up information - use tools to get real data
 - Be proactive - if a task needs multiple steps, do them all
 - Keep responses under 500 words unless asked for more detail
@@ -337,7 +341,7 @@ IMPORTANT RULES:
     async def _tool_run_command(self, command: str) -> str:
         """Run a safe shell command."""
         # Safety: block dangerous commands
-        dangerous = ["rm -rf", "mkfs", "dd if=", "> /dev/", "chmod 777", "shutdown", "reboot"]
+        dangerous = ["rm -rf /", "mkfs", "dd if=", "> /dev/", "chmod 777", "shutdown", "reboot"]
         for d in dangerous:
             if d in command.lower():
                 return f"⛔ Blocked dangerous command: {command}"
@@ -348,9 +352,10 @@ IMPORTANT RULES:
                 command,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                cwd=os.path.expanduser("~"),  # Run from home directory
             )
             stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=10)
-            output = stdout.decode()[:1000] or stderr.decode()[:500] or "(no output)"
+            output = stdout.decode()[:1500] or stderr.decode()[:500] or "(no output)"
             return f"💻 `{command}`\n```\n{output}\n```"
         except asyncio.TimeoutError:
             return f"⏱️ Command timed out: {command}"
