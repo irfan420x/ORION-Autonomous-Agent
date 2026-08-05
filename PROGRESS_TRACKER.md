@@ -3,8 +3,8 @@
 
 ## Current Status
 - **Current Phase:** Phase 1 (Core Foundation)
-- **Current Milestone:** M1.3 (4-Tier Memory Architecture) ✅ COMPLETE
-- **Overall Completion:** 30%
+- **Current Milestone:** M1.4 (Adaptive Runtime) ✅ COMPLETE
+- **Overall Completion:** 40%
 
 ---
 
@@ -29,10 +29,14 @@
 - [x] 33 unit tests passing
 - [x] Telegram commands for memory
 
-### M1.4: Adaptive Runtime
-- [ ] Core Engine
-- [ ] Resource Monitoring
-- [ ] Telegram commands
+### M1.4: Adaptive Runtime ✅ COMPLETE
+- [x] AdaptiveRuntime (hardware detection, mode negotiation)
+- [x] Resource monitoring (CPU, RAM, disk with thresholds)
+- [x] Operating mode switching (full, cpu_only, low_memory, offline, server, safe)
+- [x] Module priority management (critical, high, medium, low)
+- [x] Auto-switch to low_memory on RAM critical
+- [x] 42 unit tests passing
+- [x] Telegram commands: /runtime, /resources, /modules, /setmode
 
 ---
 
@@ -43,6 +47,7 @@
 ### Task Queue: /tasks, /addtask, /task, /completetask, /failedtask
 ### Memory: /memory, /remember, /recall, /forget, /searchmemory
 ### EventBus: /events, /stats
+### Adaptive Runtime: /runtime, /resources, /modules, /setmode
 
 ---
 
@@ -50,4 +55,5 @@
 - M1.1: 28 tests ✅
 - M1.2: 23 tests ✅
 - M1.3: 33 tests ✅
-- **Total: 84 tests passing**
+- M1.4: 42 tests ✅
+- **Total: 126 tests passing**

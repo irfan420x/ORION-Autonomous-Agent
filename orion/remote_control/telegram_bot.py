@@ -27,6 +27,7 @@ from orion.contracts.memory_contracts import MemoryType
 from orion.core.communication.event_bus import EventBus, get_event_bus
 from orion.core.state.state_machine import StateMachine, State
 from orion.core.state.task_queue import TaskQueueEngine
+from orion.core.runtime.runtime import AdaptiveRuntime
 from orion.memory.memory_manager import MemoryManager
 
 logger = logging.getLogger(__name__)
@@ -43,6 +44,7 @@ class OrionTelegramBot:
         state_machine: Optional[StateMachine] = None,
         task_queue: Optional[TaskQueueEngine] = None,
         memory_manager: Optional[MemoryManager] = None,
+        runtime: Optional[AdaptiveRuntime] = None,
     ):
         self.token = token
         self.allowed_user_id = allowed_user_id
@@ -50,6 +52,7 @@ class OrionTelegramBot:
         self.state_machine = state_machine
         self.task_queue = task_queue
         self.memory_manager = memory_manager
+        self.runtime = runtime
         self.app: Optional[Application] = None
         
         logger.info("OrionTelegramBot initialized for user %d", allowed_user_id)
@@ -71,7 +74,8 @@ class OrionTelegramBot:
             "🔄 **State:** /state, /setstate\n"
             "📝 **Tasks:** /tasks, /addtask, /task\n"
             "🧠 **Memory:** /memory, /remember, /recall\n"
-            "📡 **Events:** /events, /stats",
+            "📡 **Events:** /events, /stats\n"
+            "⚡ **Runtime:** /runtime, /resources, /modules, /setmode",
             parse_mode="Markdown"
         )
     
@@ -104,7 +108,12 @@ class OrionTelegramBot:
             "/lessons - Get lessons learned\n\n"
             "**EventBus:**\n"
             "/events - Recent events\n"
-            "/stats - System statistics",
+            "/stats - System statistics\n\n"
+            "**Adaptive Runtime:**\n"
+            "/runtime - Runtime status & hardware\n"
+            "/resources - CPU, RAM, disk usage\n"
+            "/modules - Loaded modules list\n"
+            "/setmode <mode> - Switch operating mode",
             parse_mode="Markdown"
         )
     
@@ -639,6 +648,136 @@ class OrionTelegramBot:
         await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
     
     # ========================================================================
+    # Adaptive Runtime Commands
+    # ========================================================================
+    
+    async def runtime_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle /runtime command - show runtime status."""
+        if not self._is_allowed(update):
+            return
+        
+        if not self.runtime:
+            await update.message.reply_text("❌ Adaptive Runtime not initialized")
+            return
+        
+        stats = self.runtime.get_stats()
+        profile = self.runtime.hardware_profile
+        
+        lines = ["⚡ **Adaptive Runtime Status**\n"]
+        
+        if profile:
+            lines.append("🖥️ **Hardware:**")
+            lines.append(f"  • CPU: {profile.cpu_cores} cores")
+            lines.append(f"  • RAM: {profile.total_ram_gb} GB")
+            lines.append(f"  • GPU: {'✅ ' + (profile.gpu_model or 'Detected') if profile.has_gpu else '❌ None'}")
+            lines.append(f"  • Internet: {'✅' if profile.internet_connected else '❌'}")
+            lines.append(f"  • OS: {profile.os_name} {profile.os_version}")
+            lines.append("")
+        
+        lines.append("⚙️ **Runtime:**")
+        lines.append(f"  • Mode: `{stats['current_mode']}`")
+        lines.append(f"  • Modules: {stats['loaded_module_count']}/{stats['total_module_count']}")
+        lines.append(f"  • Mode switches: {stats['mode_switches']}")
+        lines.append(f"  • Resource alerts: {stats['resource_alerts']}")
+        lines.append(f"  • Uptime: {stats['uptime_seconds']:.0f}s")
+        lines.append(f"  • Feasible modes: {', '.join(stats['feasible_modes'])}")
+        
+        await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+    
+    async def resources_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle /resources command - show current resource usage."""
+        if not self._is_allowed(update):
+            return
+        
+        if not self.runtime:
+            await update.message.reply_text("❌ Adaptive Runtime not initialized")
+            return
+        
+        usage = self.runtime.get_resource_usage()
+        
+        def threshold_icon(t):
+            return {"low": "🟢", "moderate": "🟡", "high": "🟠", "critical": "🔴"}.get(t, "⚪")
+        
+        lines = ["📊 **Resource Usage**\n"]
+        
+        cpu = usage["cpu"]
+        lines.append(f"{threshold_icon(cpu['threshold'])} **CPU:** {cpu['percent']}% ({cpu['cores']} cores)")
+        
+        ram = usage["ram"]
+        lines.append(f"{threshold_icon(ram['threshold'])} **RAM:** {ram['percent']}% ({ram['used_gb']}/{ram['total_gb']} GB)")
+        
+        disk = usage["disk"]
+        lines.append(f"{threshold_icon(disk['threshold'])} **Disk:** {disk['percent']}% ({disk['used_gb']}/{disk['total_gb']} GB)")
+        
+        await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+    
+    async def setmode_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle /setmode <mode> command - switch operating mode."""
+        if not self._is_allowed(update):
+            return
+        
+        if not self.runtime:
+            await update.message.reply_text("❌ Adaptive Runtime not initialized")
+            return
+        
+        if not context.args:
+            modes = self.runtime.get_feasible_modes()
+            await update.message.reply_text(
+                f"Usage: `/setmode <mode>`\n\n"
+                f"Feasible modes: {', '.join(modes)}",
+                parse_mode="Markdown"
+            )
+            return
+        
+        new_mode = context.args[0].lower()
+        reason = " ".join(context.args[1:]) if len(context.args) > 1 else "manual via Telegram"
+        
+        result = await self.runtime.switch_mode(new_mode, reason=reason)
+        
+        if result:
+            await update.message.reply_text(
+                f"✅ Mode switched to `{new_mode}`",
+                parse_mode="Markdown"
+            )
+        else:
+            feasible = self.runtime.get_feasible_modes()
+            await update.message.reply_text(
+                f"❌ Cannot switch to `{new_mode}`\n\n"
+                f"Feasible modes: {', '.join(feasible)}",
+                parse_mode="Markdown"
+            )
+    
+    async def modules_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle /modules command - show loaded modules."""
+        if not self._is_allowed(update):
+            return
+        
+        if not self.runtime:
+            await update.message.reply_text("❌ Adaptive Runtime not initialized")
+            return
+        
+        from orion.core.runtime.runtime import MODULE_PRIORITIES, ModulePriority
+        
+        loaded = self.runtime.loaded_modules
+        
+        priority_icons = {
+            ModulePriority.CRITICAL: "🔴",
+            ModulePriority.HIGH: "🟠",
+            ModulePriority.MEDIUM: "🟡",
+            ModulePriority.LOW: "🟢",
+        }
+        
+        lines = ["📦 **Modules**\n"]
+        for name, priority in sorted(MODULE_PRIORITIES.items(), key=lambda x: x[1].value):
+            icon = priority_icons.get(priority, "⚪")
+            status = "✅" if name in loaded else "⬜"
+            lines.append(f"{status} {icon} `{name}` ({priority.value})")
+        
+        lines.append(f"\nLoaded: {len(loaded)}/{len(MODULE_PRIORITIES)}")
+        
+        await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+    
+    # ========================================================================
     # Message Handler
     # ========================================================================
     
@@ -745,6 +884,12 @@ class OrionTelegramBot:
         # EventBus commands
         self.app.add_handler(CommandHandler("events", self.events_command))
         
+        # Adaptive Runtime commands
+        self.app.add_handler(CommandHandler("runtime", self.runtime_command))
+        self.app.add_handler(CommandHandler("resources", self.resources_command))
+        self.app.add_handler(CommandHandler("setmode", self.setmode_command))
+        self.app.add_handler(CommandHandler("modules", self.modules_command))
+        
         # Message handler
         self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
         
@@ -768,6 +913,7 @@ def main():
     state_machine = StateMachine(event_bus, initial_state=State.IDLE)
     task_queue = TaskQueueEngine(event_bus, state_file="state/task_queue.json")
     memory_manager = MemoryManager(event_bus)
+    runtime = AdaptiveRuntime(event_bus)
     
     bot = OrionTelegramBot(
         token=BOT_TOKEN,
@@ -776,6 +922,7 @@ def main():
         state_machine=state_machine,
         task_queue=task_queue,
         memory_manager=memory_manager,
+        runtime=runtime,
     )
     
     try:
