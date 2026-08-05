@@ -464,6 +464,64 @@ NEVER say "I can create" when user says "delete". ALWAYS match the user's intent
             return f"No results for: {query}"
         return "❌ Memory not available"
     
+    async def _parse_and_execute_tool_calls(self, response: str, update) -> str:
+        """
+        Parse tool call syntax from LLM response text and execute them.
+        Handles cases where LLM puts tool calls in content instead of API field.
+        """
+        import re
+        
+        # Check for tool call patterns
+        # Pattern 1: <toolcall>...</toolcall>
+        tool_call_pattern = r'<toolcall>\s*<function=(\w+)>\s*(.*?)\s*</function=\1>\s*</toolcall>'
+        match = re.search(tool_call_pattern, response, re.DOTALL | re.IGNORECASE)
+        
+        if match:
+            tool_name = match.group(1)
+            params_text = match.group(2)
+            
+            # Extract parameters
+            param_pattern = r'<parameter=(\w+)>(.*?)</parameter=\1>'
+            params = dict(re.findall(param_pattern, params_text, re.DOTALL))
+            
+            logger.info("Parsed tool call from text: %s with params: %s", tool_name, params)
+            
+            # Execute the tool
+            await update.message.chat.send_action("typing")
+            result = await self._execute_tool(tool_name, params)
+            
+            # Replace tool call syntax with result
+            clean_response = re.sub(tool_call_pattern, '', response, flags=re.DOTALL | re.IGNORECASE).strip()
+            if clean_response:
+                return f"{clean_response}\n\n{result}"
+            return result
+        
+        # Pattern 2: ```toolcall...```
+        code_block_pattern = r'```toolcall\s*\n(.*?)\n```'
+        match = re.search(code_block_pattern, response, re.DOTALL)
+        
+        if match:
+            tool_text = match.group(1)
+            # Try to extract function name and command
+            func_match = re.search(r'function[=:]\s*(\w+)', tool_text, re.IGNORECASE)
+            cmd_match = re.search(r'command[=:]\s*["\']?(.*?)["\']?$', tool_text, re.MULTILINE | re.IGNORECASE)
+            
+            if func_match and cmd_match:
+                tool_name = func_match.group(1)
+                command = cmd_match.group(1).strip()
+                
+                logger.info("Parsed tool call from code block: %s command=%s", tool_name, command)
+                
+                await update.message.chat.send_action("typing")
+                result = await self._execute_tool(tool_name, {"command": command})
+                
+                clean_response = re.sub(code_block_pattern, '', response, flags=re.DOTALL).strip()
+                if clean_response:
+                    return f"{clean_response}\n\n{result}"
+                return result
+        
+        return response
+    
     async def _tool_create_file(self, path: str, content: str) -> str:
         """Create a file with content."""
         import os
@@ -1382,11 +1440,21 @@ NEVER say "I can create" when user says "delete". ALWAYS match the user's intent
                     
                     assistant_response = final_response.content
                     
+                    # Parse tool calls from response text (LLM sometimes puts them in content)
+                    assistant_response = await self._parse_and_execute_tool_calls(
+                        assistant_response, update
+                    )
+                    
                     # Add to history
                     history.append({"role": "assistant", "content": assistant_response})
                 else:
                     # No tool calls, just respond
                     assistant_response = message.get("content", response.content)
+                    
+                    # Parse tool calls from response text
+                    assistant_response = await self._parse_and_execute_tool_calls(
+                        assistant_response, update
+                    )
                     
                     # Add to history
                     history.append({"role": "assistant", "content": assistant_response})
