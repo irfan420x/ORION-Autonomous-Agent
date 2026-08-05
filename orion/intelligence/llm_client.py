@@ -336,6 +336,8 @@ class LLMClient:
         headers = {
             "Authorization": f"Bearer {config.api_key}",
             "Content-Type": "application/json",
+            "HTTP-Referer": "https://orion-agent.local",
+            "X-Title": "ORION Autonomous Agent",
         }
         
         client = await self._get_client()
