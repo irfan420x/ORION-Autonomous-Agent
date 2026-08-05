@@ -242,10 +242,26 @@ NEVER say "I can create" when user says "delete". ALWAYS match the user's intent
         """
         msg = message.lower().strip()
         
-        # Delete patterns
+        # Delete patterns (HIGH PRIORITY)
         delete_patterns = [
             r'ডিলিট', r'delete', r'মুছে', r'মুছ', r'remove', r'rm ',
             r'kas', r'কাস', r'বাদ দাও', r'ফেলে দাও',
+        ]
+        
+        # System info patterns (HIGH PRIORITY - check before list)
+        system_patterns = [
+            r'system\s*info', r'সিস্টেম\s*ইনফো', r'system\s*status',
+            r'cpu', r'ram', r'memory\s*info', r'রেম',
+        ]
+        
+        # Health patterns (HIGH PRIORITY)
+        health_patterns = [
+            r'health\s*check', r'হেলথ\s*চেক', r'স্বাস্থ্য',
+        ]
+        
+        # Runtime patterns (HIGH PRIORITY)
+        runtime_patterns = [
+            r'runtime\s*status', r'রানটাইম', r'orion\s*status',
         ]
         
         # Create patterns
@@ -254,35 +270,46 @@ NEVER say "I can create" when user says "delete". ALWAYS match the user's intent
             r'write', r'generate', r'তৈরি করো',
         ]
         
-        # List patterns
+        # List patterns (LOWER PRIORITY - check after system/health)
         list_patterns = [
-            r'কী আছে', r'কি আছে', r'list', r'দেখাও', r'show',
-            r'কী কী', r'কি কি', r'বলো', r'dir\b',
+            r'কী আছে', r'কি আছে', r'list', r'dir\b',
         ]
         
         # Extract filenames from message
         import re
         filenames = re.findall(r'[\w.-]+\.py', message)
         
-        # Check for delete action
+        # 1. Check for delete action (highest priority)
         for pattern in delete_patterns:
             if re.search(pattern, msg):
                 if filenames:
-                    # Build rm command for each file
                     file_args = ' '.join([f'~/Desktop/{f}' for f in filenames])
                     return ('run_shell_command', {'command': f'rm {file_args}'})
-                else:
-                    # Ask for filenames via LLM
-                    return None
+                return None
         
-        # Check for create action
+        # 2. Check for system info (before list)
+        for pattern in system_patterns:
+            if re.search(pattern, msg):
+                return ('get_system_info', {})
+        
+        # 3. Check for health check
+        for pattern in health_patterns:
+            if re.search(pattern, msg):
+                return ('get_health_status', {})
+        
+        # 4. Check for runtime status
+        for pattern in runtime_patterns:
+            if re.search(pattern, msg):
+                return ('get_runtime_status', {})
+        
+        # 5. Check for create action
         for pattern in create_patterns:
             if re.search(pattern, msg):
                 if filenames:
                     return ('create_file', {'path': f'~/Desktop/{filenames[0]}', 'content': '# Created by ORION\n'})
                 return None
         
-        # Check for list action
+        # 6. Check for list action (lowest priority)
         for pattern in list_patterns:
             if re.search(pattern, msg):
                 if 'desktop' in msg or 'ডেস্কটপ' in msg:
@@ -1498,8 +1525,9 @@ def main():
     task_queue = TaskQueueEngine(event_bus, state_file="state/task_queue.json")
     memory_manager = MemoryManager(event_bus)
     runtime = AdaptiveRuntime(event_bus)
+    health_monitor = HealthMonitor(event_bus)
     
-    # Initialize LLM Client (mimo-v2.5-pro via OpenRouter)
+    # Initialize LLM Client (mimo-v2.5-pro via Xiaomi API)
     llm_client = LLMClient(
         event_bus=event_bus,
         default_model="mimo-v2.5-pro",
@@ -1513,6 +1541,7 @@ def main():
         task_queue=task_queue,
         memory_manager=memory_manager,
         runtime=runtime,
+        health_monitor=health_monitor,
         llm_client=llm_client,
     )
     
